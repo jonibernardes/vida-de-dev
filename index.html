@@ -13,10 +13,7 @@
 <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8F%A0%3C/text%3E%3C/svg%3E">
 <title>Vida de Dev</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap">
-<style>
-html,body{height:100%;overflow:hidden;background:#0C1120}
-body{margin:0}
-</style>
+<style>html,body{height:100%;overflow:hidden;background:#0C1120}body{margin:0}</style>
 </head>
 <body>
 <style>
@@ -1885,6 +1882,17 @@ function comecar(){
   window.addEventListener('resize', ajustarCanvas);
   requestAnimationFrame(loop);
 
+  const atalho = (location.hash||'').replace('#','').split(/[,\-/]/).filter(Boolean);
+  if(atalho.length){
+    const demo = atalho.includes('demo');
+    if(demo) popularDemo();
+    setVel(demo ? 0 : 3);
+    const aba = ABAS.find(a => atalho.includes(a.id));
+    if(aba) irPara(aba.id); else render();
+    if(!demo){ carregarSeTiver(); setInterval(salvar, 30000); }
+    return;
+  }
+
   setTimeout(() => {
     sheet(
       `<h2>Vida de Dev</h2>
@@ -1900,8 +1908,40 @@ function comecar(){
     );
   }, 350);
 
-  carregar();
+  carregarSeTiver();
   setInterval(salvar, 30000);
+}
+
+function carregarSeTiver(){ carregar(); }
+
+function popularDemo(){
+  S.t = 26.5; S.dinheiro = 4380; S.divida = 6200;
+  S.b = {energia:52, fome:44, higiene:66, animo:58, corpo:47, estresse:63, casamento:51};
+  S.hab = {vendas:41, execucao:53, suporte:28};
+  S.sujeira = 58; S.despensa = 34;
+  S.google = {soma:24, n:5}; S.ra.historico = 1;
+  const mk = (nome,empresa,pedido,tipo,classe,st,extra) => Object.assign({
+    id:S.seq++, nome, empresa, pedido, classe, tipo, base: rnd(CFG.tipos[tipo].pMin, CFG.tipos[tipo].pMax),
+    teto: 0, custo: 70, st, hReuniao: S.t + 3.5, follows:0, atrasada:false, orcamento:0, noShow:false,
+  }, extra||{});
+  S.leads = [
+    mk('Reginaldo','Auto Peças Bandeirante','controle de estoque','M','B','marcada'),
+    mk('Tatiane','Ótica Vista Nova','agenda de clientes','S','A','orcar',{hReuniao:S.t-2}),
+    mk('Gilmar','Transportes Lopes','gestão de entregas','M','C','pensando',{orcamento:1600, hOrc:S.t-14, follows:1}),
+  ];
+  S.leads.forEach(l => l.teto = l.base*CFG.classes[l.classe].teto);
+  S.projetos = [{id:S.seq++, cliente:'Padaria Pão de Ouro', contato:'Sueli', classe:'B', tipo:'M',
+    preco:1800, horas:22, feitas:13.5, prazo:S.t+38, inicio:S.t-60, satisfacao:70,
+    pedido:'sistema de ordem de serviço', atraso:false}];
+  S.entregues = [{id:S.seq++, cliente:'Pet Shop Focinho Feliz', contato:'Kelly', classe:'A', satisfacao:86, quando:S.t-40, avaliado:false}];
+  S.chamados = [{id:S.seq++, cliente:'Pet Shop Focinho Feliz', classe:'A', refId:S.entregues[0].id,
+    horas:1.5, feitas:0, aberto:S.t-20, grande:false, dias:1, desc:'O relatório saiu com número errado.'}];
+  S.ra.abertas = [{id:S.seq++, cliente:'Borracharia do Zé', motivo:'atrasou a entrega', quando:S.t-70}];
+  S.extrato = [{desc:'Entrada — Padaria Pão de Ouro', v:900, t:S.t-60},
+    {desc:'Lead', v:-70, t:S.t-30}, {desc:'Mercado', v:-250, t:S.t-24},
+    {desc:'Contas do mês (parcial)', v:-2800, t:S.t-120}, {desc:'Foi pra dívida', v:-6200, t:S.t-120, divida:true}];
+  S.zap = [{id:S.seq++, de:'Gilmar', txt:'Deixa eu conversar com meu sócio', meu:false, t:S.t-14},
+    {id:S.seq++, de:'Você', txt:'Oi! Conseguiu ver a proposta?', meu:true, t:S.t-15}];
 }
 comecar();
 </script>
