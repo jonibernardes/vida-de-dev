@@ -22,8 +22,9 @@ const bytes = n => crypto.getRandomValues(new Uint8Array(n));
 async function derivar(senha, saltHex) {
   const salt = new Uint8Array(saltHex.match(/../g).map(h => parseInt(h, 16)));
   const chave = await crypto.subtle.importKey('raw', new TextEncoder().encode(senha), 'PBKDF2', false, ['deriveBits']);
+  // 100 mil é o teto do Workers: acima disso ele recusa com "iteration counts above 100000"
   const bits = await crypto.subtle.deriveBits(
-    { name: 'PBKDF2', salt, iterations: 120000, hash: 'SHA-256' }, chave, 256);
+    { name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' }, chave, 256);
   return hex(bits);
 }
 
