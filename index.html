@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no">
 <meta name="theme-color" content="#1E2740">
-<meta name="description" content="Voce faz sistemas sob medida em casa e tenta pagar R$ 11 mil de contas todo mes sem se destruir.">
+<meta name="description" content="Voce faz sistemas sob medida em casa e tenta pagar R$ 9 mil de contas todo mes sem se destruir.">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -73,6 +73,19 @@ h1,h2,h3{font-family:'Bricolage Grotesque',system-ui,sans-serif; margin:0; text-
 .chip.pos .v{color:var(--verde)}
 .miniBar{height:4px; border-radius:3px; background:var(--linha); overflow:hidden; margin-top:3px}
 .miniBar i{display:block; height:100%; border-radius:3px; background:var(--roxo)}
+
+/* vitais sempre visíveis */
+#vitais{display:flex; gap:3px; width:100%; text-align:left}
+#vitais span{
+  flex:1; background:var(--carta); border-radius:8px; padding:3px 1px 4px;
+  display:flex; flex-direction:column; align-items:center; line-height:1.15;
+  border-bottom:2px solid transparent;
+}
+#vitais span i{font-style:normal; font-size:11px; opacity:.85}
+#vitais span u{
+  text-decoration:none; font-family:'DM Mono',monospace; font-size:11.5px; font-weight:500;
+  font-variant-numeric:tabular-nums;
+}
 
 /* ---------- views ---------- */
 #views{flex:1 1 auto; position:relative; overflow:hidden}
@@ -173,6 +186,25 @@ h1,h2,h3{font-family:'Bricolage Grotesque',system-ui,sans-serif; margin:0; text-
   max-height:88%; overflow-y:auto; border-top:1px solid var(--linha);
   animation:up .22s cubic-bezier(.2,.9,.3,1);
 }
+#sheetBox.meia{max-height:52%; padding:0 0 12px; display:flex; flex-direction:column}
+.sheetHead{
+  position:sticky; top:0; background:var(--noite2); z-index:2; padding:12px 14px 9px;
+  display:flex; align-items:center; gap:9px; border-bottom:1px solid var(--linha);
+}
+.sheetHead h2{font-size:15px; flex:1}
+.sheetHead .fechar{font-size:17px; color:var(--texto3); padding:2px 6px; line-height:1}
+.sheetScroll{overflow-y:auto; padding:10px 14px 6px; flex:1}
+/* mesa compacta */
+.meia .card{padding:8px 10px; margin-bottom:6px; border-radius:11px}
+.meia .cardTop{margin-bottom:3px; gap:6px}
+.meia .cardTop h3{font-size:12.5px}
+.meia .pill{font-size:8.5px; padding:2px 6px}
+.meia .meta{font-size:11px; line-height:1.4}
+.meia .acts{margin-top:6px; gap:5px}
+.meia .btn{padding:5px 9px; font-size:11.5px; border-radius:8px}
+.meia .secTit{margin:10px 0 5px; font-size:10.5px}
+.meia .secTit:first-child{margin-top:0}
+.meia .prog2{height:5px; margin-top:6px}
 @keyframes up{from{transform:translateY(30px); opacity:.4}}
 @media (prefers-reduced-motion:reduce){#sheetBox{animation:none}}
 #sheetBox h2{font-size:17px; margin-bottom:3px}
@@ -196,17 +228,17 @@ label.f{display:block; font-size:11px; text-transform:uppercase; letter-spacing:
 
 /* ---------- toast ---------- */
 #toasts{
-  position:absolute; left:8px; right:8px; top:8px; z-index:60;
-  display:flex; flex-direction:column; gap:6px; pointer-events:none;
+  position:absolute; left:8px; right:8px; bottom:8px; top:auto; z-index:55;
+  display:flex; flex-direction:column-reverse; gap:6px; pointer-events:none;
 }
 .toast{
   background:var(--carta2); border:1px solid var(--linha); border-radius:12px; padding:9px 12px;
-  font-size:12.5px; line-height:1.45; box-shadow:0 8px 24px rgba(0,0,0,.45);
+  font-size:12.5px; line-height:1.45; box-shadow:0 10px 28px rgba(0,0,0,.55);
   animation:tin .25s; border-left:3px solid var(--laranja);
 }
 .toast.v{border-left-color:var(--verde)} .toast.r{border-left-color:var(--vermelho)}
 .toast.x{border-left-color:var(--roxo)} .toast b{font-weight:700}
-@keyframes tin{from{transform:translateY(-8px); opacity:0}}
+@keyframes tin{from{transform:translateY(10px); opacity:0}}
 @media (prefers-reduced-motion:reduce){.toast{animation:none}}
 
 .stars{color:var(--laranja); letter-spacing:2px; font-size:15px}
@@ -215,6 +247,32 @@ label.f{display:block; font-size:11px; text-transform:uppercase; letter-spacing:
 .kv span:last-child{font-family:'DM Mono',monospace; font-weight:500}
 .big{font-family:'Bricolage Grotesque'; font-size:27px; font-weight:800; letter-spacing:-1px; font-variant-numeric:tabular-nums}
 .saveTag{font-size:9.5px; color:var(--texto3); text-align:center; padding:10px 0 4px; letter-spacing:.4px}
+
+/* ---------- entrada ---------- */
+#login{
+  position:absolute; inset:0; z-index:80; background:var(--noite);
+  display:flex; align-items:center; justify-content:center; padding:22px;
+}
+#login.off{display:none}
+.loginBox{width:100%; max-width:330px}
+.loginBox h1{font-size:31px; letter-spacing:-1.2px; margin-bottom:6px}
+.lsub{font-size:12.5px; color:var(--texto2); line-height:1.55; margin:0 0 20px}
+.lerro{color:var(--vermelho); font-size:12px; margin-top:10px; min-height:16px}
+.perfil{
+  width:100%; text-align:left; background:var(--carta); border-radius:11px; padding:10px 12px;
+  margin-bottom:6px; display:flex; align-items:center; gap:10px;
+}
+.perfil.sel{background:var(--carta2); box-shadow:inset 3px 0 0 var(--laranja)}
+.perfil .av{
+  width:30px; height:30px; border-radius:50%; background:var(--laranja); color:#231603;
+  display:flex; align-items:center; justify-content:center; font-weight:800; font-size:14px;
+}
+.perfil .nm{flex:1; font-size:13.5px; font-weight:600}
+.perfil .dt{font-size:10.5px; color:var(--texto3); font-family:'DM Mono',monospace}
+.linkBt{
+  display:block; width:100%; text-align:center; font-size:12px; color:var(--texto2);
+  padding:11px 0 2px; text-decoration:underline; text-underline-offset:3px;
+}
 </style>
 
 <div id="app">
@@ -230,19 +288,17 @@ label.f{display:block; font-size:11px; text-transform:uppercase; letter-spacing:
       <div class="chip" id="cGrana"><div class="k">Conta</div><div class="v">R$ 0</div></div>
       <div class="chip" id="cDivida"><div class="k">Dívida</div><div class="v">R$ 0</div></div>
       <div class="chip" id="cFama"><div class="k">Google</div><div class="v">5,0★</div></div>
-      <div class="chip" id="cStress"><div class="k">Estresse</div><div class="v">0</div><div class="miniBar"><i style="width:0"></i></div></div>
     </div>
+    <button id="vitais" aria-label="Como você está"></button>
   </header>
 
   <div id="views">
     <section class="view on" id="v-casa">
       <div id="houseWrap"><canvas id="house"></canvas></div>
     </section>
-    <section class="view" id="v-mesa"><div class="pad" id="mesaBody"></div></section>
     <section class="view" id="v-zap"><div class="pad" id="zapBody"></div></section>
     <section class="view" id="v-grana"><div class="pad" id="granaBody"></div></section>
     <section class="view" id="v-fama"><div class="pad" id="famaBody"></div></section>
-    <section class="view" id="v-voce"><div class="pad" id="voceBody"></div></section>
   </div>
 
   <div id="doing">
@@ -258,6 +314,16 @@ label.f{display:block; font-size:11px; text-transform:uppercase; letter-spacing:
   <div id="toasts"></div>
 
   <div id="sheet"><div id="sheetBox"></div></div>
+
+  <div id="login">
+    <div class="loginBox">
+      <h1>Vida de Dev</h1>
+      <p class="lsub">Você faz sistemas sob medida em casa. As contas são R$ 9 mil todo dia 5, mais o mercado.</p>
+      <div id="loginPerfis"></div>
+      <div id="loginForm"></div>
+      <div class="lerro" id="loginErro"></div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -267,7 +333,7 @@ label.f{display:block; font-size:11px; text-transform:uppercase; letter-spacing:
    ============================================================ */
 
 const CFG = {
-  msPorHora: 10000,
+  msPorHora: 40000,
   vels: [0, 0.25, 0.5, 1, 2, 4],
   velLabels: ['⏸','¼','½','1x','2x','4x'],
 
@@ -313,7 +379,9 @@ const cl  = (v,a,b) => Math.max(a, Math.min(b, v));
 const rnd = (a,b) => a + Math.random()*(b-a);
 const ri  = (a,b) => Math.floor(rnd(a, b+1));
 const pick= a => a[Math.floor(Math.random()*a.length)];
-const D0  = new Date(2026, 2, 2, 7, 0, 0);
+// segunda, 9 de marco: o dia seguinte ao vencimento das contas.
+// comecar no dia 2 dava 3 dias ate o dia 5 e a divida era inevitavel.
+const D0  = new Date(2026, 2, 9, 7, 0, 0);
 
 const NOMES = ['Wellington','Cleide','Marcos Aurélio','Tatiane','Reginaldo','Sueli','Fabrício',
   'Juliana','Anderson','Rosângela','Everton','Patrícia','Gilmar','Vanessa','Cláudio','Simone',
@@ -334,7 +402,7 @@ function novoJogo(){
     v: 1,
     t: 0,                      // horas de jogo desde o início
     vel: 3,
-    dinheiro: 3000,
+    dinheiro: 12000,
     divida: 0,
     b: {energia:78, fome:70, higiene:80, animo:72, corpo:55, estresse:18, casamento:74},
     hab: {vendas:22, execucao:30, suporte:15},
@@ -368,6 +436,9 @@ function novoJogo(){
 /* ---------------- tempo ---------------- */
 const agora = () => new Date(D0.getTime() + S.t*3600e3);
 const hDia  = () => { const d = agora(); return d.getHours() + d.getMinutes()/60; };
+// hora do dia de um instante ABSOLUTO do jogo (h desde o inicio).
+// nao use "h % 24": o jogo comeca as 07:00 e a conta sai 7 horas errada.
+const hDe = h => { const d = new Date(D0.getTime() + h*3600e3); return d.getHours() + d.getMinutes()/60; };
 const fds   = () => { const w = agora().getDay(); return w===0 || w===6; };
 const DIAS  = ['dom','seg','ter','qua','qui','sex','sáb'];
 const MESES = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
@@ -1143,6 +1214,7 @@ function desenharCasa(){
 
   if(S.sujeira > 35) desenharSujeira();
   desenharBoneco();
+  selo();
 
   // brilho do móvel tocado
   if(tocado && tocado.until > performance.now()){
@@ -1273,6 +1345,23 @@ function portaSaida(){
   fill('#7A4C2B', m.x+7, m.y+52, m.w-14, 44, 2);
   fill('#F2A03D', m.x+m.w-13, m.y+m.h/2, 6, 6, 3);
 }
+// selo de pendencia em cima da mesa de trabalho
+function selo(){
+  const n = pendencias();
+  if(!n) return;
+  const m = MOVEIS[5];
+  const x = m.x + m.w - 4, y = m.y - 6;
+  cx.fillStyle = 'rgba(0,0,0,.28)';
+  cx.beginPath(); cx.arc(x, y+2, 13, 0, 7); cx.fill();
+  cx.fillStyle = '#E0503A';
+  cx.beginPath(); cx.arc(x, y, 12.5, 0, 7); cx.fill();
+  cx.fillStyle = '#fff';
+  cx.font = '800 14px Figtree, sans-serif';
+  cx.textAlign = 'center'; cx.textBaseline = 'middle';
+  cx.fillText(String(n), x, y+1);
+  cx.textAlign = 'start'; cx.textBaseline = 'alphabetic';
+}
+
 function desenharSujeira(){
   const n = Math.floor(S.sujeira/12);
   cx.globalAlpha = .55;
@@ -1402,9 +1491,7 @@ function menuMovel(id){
     add('🎓','Fazer o curso de Excel avançado','+10 de Execução, pra sempre', fmt(CFG.curso.custo),
       ()=>{ fecharSheet(); iniciar('curso','Fazendo o curso','', CFG.curso.horas); }, S.dinheiro < CFG.curso.custo);
   }
-  if(id === 'mesaTrab'){
-    fecharSheet(); irPara('mesa'); return;
-  }
+  if(id === 'mesaTrab'){ abrirMesa(); return; }
 
   const m = MOVEIS.find(x=>x.id===id);
   sheet(`<h2>${m.lab}</h2><div class="sub">${hhmm(hDia())} · ${S.depre?'Você está travado. Quase nada rende.':'O que você faz agora?'}</div>`, o);
@@ -1414,11 +1501,30 @@ function menuMovel(id){
    INTERFACE
    ============================================================ */
 const ABAS = [
-  {id:'casa', ic:'🏠', n:'Casa'}, {id:'mesa', ic:'💼', n:'Mesa'},
-  {id:'zap',  ic:'💬', n:'Zap'},  {id:'grana',ic:'💰', n:'Grana'},
-  {id:'fama', ic:'⭐', n:'Fama'}, {id:'voce', ic:'🙂', n:'Você'},
+  {id:'casa', ic:'🏠', n:'Casa'},  {id:'zap',  ic:'💬', n:'Zap'},
+  {id:'grana',ic:'💰', n:'Grana'}, {id:'fama', ic:'⭐', n:'Fama'},
 ];
 let abaAtual = 'casa';
+let mesaAberta = false;
+
+const VITAIS = [
+  {k:'energia',   ic:'⚡', n:'Energia'},
+  {k:'fome',      ic:'🍽', n:'Fome'},
+  {k:'higiene',   ic:'🚿', n:'Higiene'},
+  {k:'animo',     ic:'🙂', n:'Ânimo'},
+  {k:'corpo',     ic:'💪', n:'Corpo'},
+  {k:'casamento', ic:'❤️', n:'Casamento'},
+  {k:'estresse',  ic:'😰', n:'Estresse', invertido:true},
+];
+function corVital(v, invertido){
+  const b = invertido ? 100-v : v;
+  return b >= 60 ? 'var(--verde)' : (b >= 30 ? 'var(--laranja)' : 'var(--vermelho)');
+}
+function pendencias(){
+  return S.leads.filter(l => ['marcada','orcar','pensando'].includes(l.st)).length
+       + S.chamados.length
+       + S.projetos.filter(p => p.feitas >= p.horas).length;
+}
 
 function montarAbas(){
   const el = document.getElementById('tabs');
@@ -1454,10 +1560,12 @@ function atualizarHud(){
   dv.querySelector('.v').textContent = S.divida > 0 ? fmt(S.divida) : '—';
   dv.className = 'chip ' + (S.divida > 0 ? 'neg' : '');
   document.getElementById('cFama').querySelector('.v').textContent = estrelas().toFixed(1).replace('.',',')+'★';
-  const st = document.getElementById('cStress');
-  st.querySelector('.v').textContent = Math.round(S.b.estresse);
-  st.querySelector('.miniBar i').style.width = S.b.estresse+'%';
-  st.querySelector('.miniBar i').style.background = S.b.estresse>85 ? 'var(--vermelho)' : 'var(--roxo)';
+
+  const vt = document.getElementById('vitais');
+  vt.innerHTML = VITAIS.map(v => {
+    const val = Math.round(S.b[v.k]), c = corVital(val, v.invertido);
+    return `<span style="border-bottom-color:${c}"><i>${v.ic}</i><u style="color:${c}">${val}</u></span>`;
+  }).join('');
 
   const doing = document.getElementById('doing');
   if(S.fazendo){
@@ -1480,8 +1588,9 @@ function atualizarHud(){
     document.getElementById('doSub').textContent = sub;
     document.getElementById('doBar').style.width = cl(pct,0,100)+'%';
   } else doing.classList.remove('on');
+  // as mensagens ficam embaixo, sem cobrir o menu nem a barra da acao em curso
+  document.getElementById('toasts').style.bottom = (S.fazendo ? 116 : 64) + 'px';
 
-  badge('mesa', S.leads.filter(l=>['marcada','orcar','pensando'].includes(l.st)).length + S.chamados.length + S.projetos.filter(p=>p.feitas>=p.horas).length);
   badge('fama', S.ra.abertas.length);
 }
 function badge(aba, n){
@@ -1496,16 +1605,32 @@ let ultimoRender = 0;
 function render(leve){
   if(leve && performance.now() - ultimoRender < 400) return;
   ultimoRender = performance.now();
-  if(abaAtual === 'mesa') renderMesa();
+  if(mesaAberta) renderMesa();
   if(abaAtual === 'zap') renderZap();
   if(abaAtual === 'grana') renderGrana();
   if(abaAtual === 'fama') renderFama();
-  if(abaAtual === 'voce') renderVoce();
   atualizarHud();
+}
+
+function abrirMesa(){
+  const box = document.getElementById('sheetBox');
+  box.className = 'meia';
+  box.innerHTML =
+    `<div class="sheetHead"><h2>Mesa de trabalho</h2>
+       <span class="pill o" id="mesaPend"></span>
+       <button class="fechar" id="mFech" aria-label="Fechar">✕</button></div>
+     <div class="sheetScroll" id="mesaBody"></div>`;
+  document.getElementById('sheet').classList.add('on');
+  mesaAberta = true;
+  document.getElementById('mFech').onclick = fecharSheet;
+  renderMesa();
 }
 
 function renderMesa(){
   const el = document.getElementById('mesaBody');
+  if(!el) return;
+  const pd = document.getElementById('mesaPend');
+  if(pd){ const n = pendencias(); pd.textContent = n ? n+' pendente'+(n>1?'s':'') : 'em dia'; pd.className = 'pill '+(n?'o':'v'); }
   let h = '';
   const M = CFG.mercados[S.mercadoMes];
   const rotMerc = {bom:['Mercado bom','v'], normal:['Mercado normal','o'], ruim:['Mercado ruim','r']};
@@ -1543,7 +1668,7 @@ function renderMesa(){
       const passou = S.t > l.hReuniao;
       const naHora = Math.abs(S.t - l.hReuniao) <= 1;
       h += `<div class="card ${passou?'warn':''}"><div class="cardTop"><h3>${l.empresa}</h3>
-        <span class="pill ${naHora?'o':''}">${diaRel(l.hReuniao)} ${hhmm(l.hReuniao%24)}</span></div>
+        <span class="pill ${naHora?'o':''}">${diaRel(l.hReuniao)} ${hhmm(hDe(l.hReuniao))}</span></div>
         <div class="meta">${l.nome} quer <b>${l.pedido}</b>.${passou?' <b style="color:var(--laranja)">Você passou da hora</b> — ainda dá pra recuperar hoje, mas sem o bônus.':''}</div>
         <div class="acts"><button class="btn pri" data-reu="${l.id}" ${S.t < l.hReuniao-1?'disabled':''}>Fazer a reunião (1h)</button></div></div>`;
     });
@@ -1642,7 +1767,7 @@ function renderZap(){
   if(!S.zap.length){ el.innerHTML = '<div class="vazio">Nenhuma conversa ainda. O zap enche quando você começa a mandar orçamento e cobrar resposta.</div>'; return; }
   el.innerHTML = S.zap.map(m => `
     <div class="card" style="${m.meu?'margin-left:36px;background:var(--carta2)':'margin-right:36px'}">
-      <div class="cardTop"><h3>${m.meu?'Você':m.de}</h3><span class="pill">${hhmm(m.t%24)}</span></div>
+      <div class="cardTop"><h3>${m.meu?'Você':m.de}</h3><span class="pill">${hhmm(hDe(m.t))}</span></div>
       <div class="meta">${m.txt}</div>
     </div>`).join('');
 }
@@ -1762,8 +1887,19 @@ const BARRAS = [
   {k:'corpo', n:'Corpo', c:'#E0503A', baixo:'Abaixo de 40 sua energia máxima cai.'},
   {k:'casamento', n:'Casamento', c:'#E07A9B', baixo:'Abaixo de 30 ela cobra, e cobra caro.'},
 ];
+function abrirVoce(){
+  const box = document.getElementById('sheetBox');
+  box.className = '';
+  box.innerHTML = `<div class="sheetHead" style="padding:2px 0 9px"><h2>Como você está</h2>
+    <button class="fechar" id="vFech" aria-label="Fechar">✕</button></div><div id="voceBody"></div>`;
+  document.getElementById('sheet').classList.add('on');
+  document.getElementById('vFech').onclick = fecharSheet;
+  renderVoce();
+}
+
 function renderVoce(){
   const el = document.getElementById('voceBody');
+  if(!el) return;
   let h = '';
   if(S.depre){
     h += `<div class="card bad"><div class="cardTop"><h3>Você travou</h3><span class="pill r">depressão</span></div>
@@ -1804,24 +1940,36 @@ function renderVoce(){
   </div>`;
 
   h += `<div class="secTit">Partida</div><div class="card">
+    <div class="kv"><span>Jogador</span><span>${perfilAtual||'—'}</span></div>
     <div class="kv"><span>Clientes entregues</span><span>${S.entregues.length}</span></div>
     <div class="kv"><span>Dias jogados</span><span>${Math.floor(S.t/24)}</span></div>
-    <div class="acts"><button class="btn dan" id="btReset">Começar de novo</button></div>
+    <div class="acts">
+      <button class="btn dan" id="btReset">Recomeçar do zero</button>
+      <button class="btn gho" id="btSair">Trocar de jogador</button>
+    </div>
   </div>`;
-  h += `<div class="saveTag" id="saveTag">salvo</div>`;
+  h += `<div class="saveTag" id="saveTag">salvo neste aparelho</div>`;
 
   el.innerHTML = h;
   document.getElementById('btReset').onclick = () => {
-    sheet('<h2>Começar de novo?</h2><div class="sub">A partida atual some. Não tem volta.</div>', [
-      {ic:'🗑️', n:'Sim, apagar tudo', click:()=>{ S = novoJogo(); fecharSheet(); salvar(); irPara('casa'); toast('Partida nova. Boa sorte.','o'); }},
+    sheet('<h2>Recomeçar do zero?</h2><div class="sub">A partida de <b>'+(perfilAtual||'você')+'</b> some: dinheiro, clientes, reputação, tudo. Não tem volta.</div>', [
+      {ic:'🗑️', n:'Sim, apagar e recomeçar', click:()=>{
+        S = novoJogo(); S.ultimoMes = agora().getMonth();
+        fecharSheet(); salvar(); irPara('casa'); setVel(3);
+        toast('Partida nova. Segunda, 9 de março, R$ 12.000 na conta.','o', 6000);
+      }},
       {ic:'↩︎', n:'Deixa quieto', click:fecharSheet},
     ]);
   };
+  document.getElementById('btSair').onclick = () => { salvar(true); fecharSheet(); sairDaConta(); };
 }
 
 /* ---------- sheet e toast ---------- */
+let voltarPraMesa = false;
 function sheet(html, opcoes){
   const box = document.getElementById('sheetBox');
+  if(mesaAberta){ voltarPraMesa = true; mesaAberta = false; }
+  box.className = '';
   box.innerHTML = html + opcoes.map((o,i) =>
     `<button class="opt" data-i="${i}" ${o.disabled?'disabled':''}>
       <span class="ic">${o.ic||'•'}</span>
@@ -1834,7 +1982,12 @@ function sheet(html, opcoes){
   });
   document.getElementById('sheet').classList.add('on');
 }
-function fecharSheet(){ document.getElementById('sheet').classList.remove('on'); }
+function fecharSheet(){
+  document.getElementById('sheet').classList.remove('on');
+  document.getElementById('sheetBox').className = '';
+  mesaAberta = false;
+  if(voltarPraMesa){ voltarPraMesa = false; abrirMesa(); }
+}
 document.getElementById('sheet').addEventListener('click', e => { if(e.target.id === 'sheet') fecharSheet(); });
 
 function toast(txt, tipo, ms){
@@ -1847,88 +2000,178 @@ function toast(txt, tipo, ms){
   setTimeout(() => { el.style.transition='opacity .3s'; el.style.opacity='0'; setTimeout(()=>el.remove(), 320); }, ms||4200);
 }
 
-/* ---------- save ---------- */
-let dbRef = null, salvarTimer = null;
-const CHAVE = 'vidadedev.save.v1';
+/* ---------- entrada por jogador ---------- */
+const K_PERFIS = 'vidadedev.jogadores';
+const K_ULTIMO = 'vidadedev.ultimo';
+let perfilAtual = null, perfilSel = null;
 
-function salvar(){
-  try{ localStorage.setItem(CHAVE, JSON.stringify(S)); }catch(e){}
-  clearTimeout(salvarTimer);
-  salvarTimer = setTimeout(async () => {
-    if(!dbRef) return;
-    try{
-      await dbRef.doc('saves/principal').set({estado: JSON.stringify(S), quando: Date.now()});
-      const t = document.getElementById('saveTag');
-      if(t) t.textContent = 'salvo na nuvem · ' + new Date().toLocaleTimeString('pt-BR');
-    }catch(e){}
-  }, 4000);
+const lerPerfis = () => { try{ return JSON.parse(localStorage.getItem(K_PERFIS)||'[]'); }catch(e){ return []; } };
+const gravarPerfis = p => { try{ localStorage.setItem(K_PERFIS, JSON.stringify(p)); }catch(e){} };
+const chaveSave = n => 'vidadedev.save.' + n.toLowerCase();
+
+async function embaralha(nome, senha){
+  const txt = 'vdd|' + nome.toLowerCase() + '|' + senha;
+  try{
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(txt));
+    return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2,'0')).join('');
+  }catch(e){
+    let h = 5381; for(let i=0;i<txt.length;i++) h = ((h*33) ^ txt.charCodeAt(i)) >>> 0;
+    return 'x'+h.toString(16);
+  }
+}
+function erroLogin(t){ document.getElementById('loginErro').textContent = t || ''; }
+
+function telaLogin(modoNovo){
+  const perfis = lerPerfis();
+  const novo = modoNovo || !perfis.length;
+  const lp = document.getElementById('loginPerfis');
+  const lf = document.getElementById('loginForm');
+  erroLogin('');
+
+  if(novo){
+    lp.innerHTML = '';
+    lf.innerHTML = `
+      <label class="f">Seu nome no jogo</label>
+      <input type="text" id="inNome" maxlength="18" placeholder="Joni" autocomplete="off">
+      <label class="f">Senha</label>
+      <input type="password" id="inSenha" placeholder="pelo menos 4 caracteres" autocomplete="new-password">
+      <div class="acts"><button class="btn pri" id="btCriar" style="width:100%;text-align:center;padding:12px">Criar e jogar</button></div>
+      ${perfis.length ? '<button class="linkBt" id="btVoltar">Já tenho jogador aqui</button>' : ''}`;
+    document.getElementById('btCriar').onclick = criarPerfil;
+    document.getElementById('inSenha').onkeydown = e => { if(e.key === 'Enter') criarPerfil(); };
+    const bv = document.getElementById('btVoltar');
+    if(bv) bv.onclick = () => telaLogin(false);
+    return;
+  }
+
+  if(!perfilSel || !perfis.some(p => p.nome === perfilSel)) perfilSel = perfis[0].nome;
+  lp.innerHTML = perfis.map(p => `
+    <button class="perfil ${p.nome===perfilSel?'sel':''}" data-p="${p.nome}">
+      <span class="av">${p.nome[0].toUpperCase()}</span>
+      <span class="nm">${p.nome}</span>
+      <span class="dt">${p.dias!=null ? 'dia '+p.dias : 'novo'}</span>
+    </button>`).join('');
+  lp.querySelectorAll('[data-p]').forEach(b => b.onclick = () => { perfilSel = b.dataset.p; telaLogin(false); });
+  lf.innerHTML = `
+    <label class="f">Senha de ${perfilSel}</label>
+    <input type="password" id="inSenha" autocomplete="current-password">
+    <div class="acts"><button class="btn pri" id="btEntrar" style="width:100%;text-align:center;padding:12px">Entrar</button></div>
+    <button class="linkBt" id="btNovo">Criar outro jogador</button>`;
+  document.getElementById('btEntrar').onclick = entrar;
+  document.getElementById('inSenha').onkeydown = e => { if(e.key === 'Enter') entrar(); };
+  document.getElementById('btNovo').onclick = () => telaLogin(true);
 }
 
-async function carregar(){
-  let local = null;
-  try{ const raw = localStorage.getItem(CHAVE); if(raw) local = JSON.parse(raw); }catch(e){}
-  let nuvem = null;
-  try{
-    dbRef = await claude.use('db');
-    if(dbRef){
-      const d = await dbRef.doc('saves/principal').get();
-      if(d && d.estado) nuvem = JSON.parse(d.estado);
-    }
-  }catch(e){ dbRef = null; }
+async function criarPerfil(){
+  const nome = (document.getElementById('inNome').value||'').trim();
+  const senha = document.getElementById('inSenha').value||'';
+  if(nome.length < 2) return erroLogin('Escreva um nome com pelo menos 2 letras.');
+  if(senha.length < 4) return erroLogin('A senha precisa de pelo menos 4 caracteres.');
+  const perfis = lerPerfis();
+  if(perfis.some(p => p.nome.toLowerCase() === nome.toLowerCase())) return erroLogin('Já existe um jogador com esse nome aqui.');
+  perfis.push({nome, hash: await embaralha(nome, senha), dias: 0});
+  gravarPerfis(perfis);
+  perfilAtual = nome;
+  try{ localStorage.setItem(K_ULTIMO, nome); }catch(e){}
+  S = novoJogo(); S.nome = nome; S.ultimoMes = agora().getMonth();
+  entrarNoJogo(true);
+}
 
-  let escolhido = local;
-  if(nuvem && (!local || nuvem.t > local.t)) escolhido = nuvem;
-  if(escolhido && escolhido.v === 1){
-    S = Object.assign(novoJogo(), escolhido);
-    S.fazendo = null;
-    S.vel = 0;
-    toast('Partida recuperada — dia ' + Math.floor(S.t/24) + '. O relógio está pausado.', 'o', 6000);
-    render(); montarVel();
+async function entrar(){
+  const senha = document.getElementById('inSenha').value||'';
+  const p = lerPerfis().find(x => x.nome === perfilSel);
+  if(!p) return erroLogin('Jogador não encontrado.');
+  if(await embaralha(p.nome, senha) !== p.hash) return erroLogin('Senha errada.');
+  perfilAtual = p.nome;
+  try{ localStorage.setItem(K_ULTIMO, p.nome); }catch(e){}
+  const salvo = carregarSave(p.nome);
+  if(salvo){ S = salvo; entrarNoJogo(false); }
+  else { S = novoJogo(); S.nome = p.nome; S.ultimoMes = agora().getMonth(); entrarNoJogo(true); }
+}
+
+function sairDaConta(){
+  perfilAtual = null;
+  setVel(0);
+  document.getElementById('login').classList.remove('off');
+  telaLogin(false);
+}
+
+function entrarNoJogo(ehNovo){
+  document.getElementById('login').classList.add('off');
+  montarAbas(); montarVel(); irPara('casa'); ajustarCanvas(); render();
+  if(ehNovo){
+    setVel(3);
+    toast('Segunda, 9 de março, 7 da manhã. <b>R$ 12.000</b> na conta e as contas do dia 5 só daqui a 4 semanas.','v', 8000);
+    setTimeout(() => toast('Toque na <b>mesa de trabalho</b> pra abrir os leads, os projetos e o suporte.','o', 8000), 2200);
+  } else {
+    setVel(0);
+    toast('Bem-vindo de volta, '+perfilAtual+' — dia '+Math.floor(S.t/24)+'. O relógio está pausado.','o', 6000);
   }
+}
+
+/* ---------- save ---------- */
+let salvarTimer = null;
+
+function carregarSave(nome){
+  try{
+    const raw = localStorage.getItem(chaveSave(nome));
+    if(!raw) return null;
+    const d = JSON.parse(raw);
+    if(!d || d.v !== 1) return null;
+    const s = Object.assign(novoJogo(), d);
+    s.fazendo = null; s.vel = 0;
+    return s;
+  }catch(e){ return null; }
+}
+
+function salvar(agoraJa){
+  if(!perfilAtual || !S) return;
+  const grava = () => {
+    try{
+      localStorage.setItem(chaveSave(perfilAtual), JSON.stringify(S));
+      const perfis = lerPerfis();
+      const p = perfis.find(x => x.nome === perfilAtual);
+      if(p){ p.dias = Math.floor(S.t/24); gravarPerfis(perfis); }
+      const t = document.getElementById('saveTag');
+      if(t) t.textContent = 'salvo neste aparelho · ' + new Date().toLocaleTimeString('pt-BR');
+    }catch(e){}
+  };
+  if(agoraJa) return grava();
+  clearTimeout(salvarTimer);
+  salvarTimer = setTimeout(grava, 1500);
 }
 
 /* ---------- início ---------- */
 function comecar(){
   S = novoJogo();
-  const d = agora();
-  S.ultimoMes = d.getMonth();
-  montarAbas(); montarVel(); ajustarCanvas(); render();
+  S.vel = 0;                       // o relogio so anda depois que alguem entra
+  S.ultimoMes = agora().getMonth();
   document.getElementById('doStop').onclick = pararAcao;
+  document.getElementById('vitais').onclick = abrirVoce;
   window.addEventListener('resize', ajustarCanvas);
+  window.addEventListener('beforeunload', () => salvar(true));
   requestAnimationFrame(loop);
 
   const bruto = (location.hash||'').replace('#','') || (new URLSearchParams(location.search).get('v')||'');
   const atalho = bruto.split(/[,\-/]/).filter(Boolean);
-  if(atalho.length){
-    const demo = atalho.includes('demo');
-    if(demo) popularDemo();
-    setVel(demo ? 0 : 3);
+  if(atalho.includes('demo')){
+    popularDemo();
+    perfilAtual = 'Demo';
+    document.getElementById('login').classList.add('off');
+    montarAbas(); montarVel(); setVel(0);
     const aba = ABAS.find(a => atalho.includes(a.id));
-    if(aba) irPara(aba.id); else render();
-    if(!demo){ carregarSeTiver(); setInterval(salvar, 30000); }
+    irPara(aba ? aba.id : 'casa');
+    ajustarCanvas();
+    if(atalho.includes('mesa')) abrirMesa();
     return;
   }
 
-  setTimeout(() => {
-    sheet(
-      `<h2>Vida de Dev</h2>
-       <div class="sub">Você faz sistemas sob medida na mesa que fica ao lado da sua cama.
-       As contas são <b>${fmt(CFG.contas.reduce((a,c)=>a+c.v,0))}</b> todo dia 5, mais o mercado.
-       Não tem game over — tem mês bom e tem buraco.</div>
-       <div class="meta" style="margin-bottom:12px;line-height:1.6">
-         <b>Toque nos móveis</b> pra comer, dormir, tomar banho e sair.<br>
-         <b>A mesa de trabalho</b> abre o funil: lead, reunião, orçamento, projeto, suporte.<br>
-         O relógio corre sozinho — 1 hora de jogo em 10 segundos.
-       </div>`,
-      [{ic:'▶️', n:'Começar', d:'Segunda-feira, 7 da manhã', click:()=>{ fecharSheet(); setVel(3); }}]
-    );
-  }, 350);
-
-  carregarSeTiver();
-  setInterval(salvar, 30000);
+  const ultimo = (() => { try{ return localStorage.getItem(K_ULTIMO); }catch(e){ return null; } })();
+  if(ultimo && lerPerfis().some(p => p.nome === ultimo)) perfilSel = ultimo;
+  montarAbas(); montarVel();
+  telaLogin(false);
+  setInterval(() => salvar(), 30000);
 }
-
-function carregarSeTiver(){ carregar(); }
 
 function popularDemo(){
   S.t = 26.5; S.dinheiro = 4380; S.divida = 6200;
