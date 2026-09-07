@@ -355,6 +355,8 @@ const CFG = {
     {n:'Lazer e supérfluos', v:1000}, {n:'Ferramentas de trabalho', v:1000},
   ],
   mercado: {custo:250, horas:1.5, repoe:100},
+  // dinheiro parado rende 1% ao mes, creditado todo dia como no cofrinho do Mercado Pago
+  rendimentoMes: 0.01,
 
   decai: {energia:-4, fome:-5, higiene:-3, animo:-1.5},
   dormeEnergia: 12,
@@ -440,6 +442,8 @@ function novoJogo(){
     ultimoMes: -1,
     faturadoMes: 0,
     gastoLeadsMes: 0,
+    rendMes: 0,
+    rendTotal: 0,
     seq: 1,
     nome: 'Você',
   };
@@ -734,8 +738,19 @@ function chegarChamado(){
 }
 
 /* ---------------- por dia ---------------- */
+const taxaDia = () => Math.pow(1 + CFG.rendimentoMes, 1/30) - 1;
+const rendeHoje = () => S.dinheiro > 0 ? S.dinheiro * taxaDia() : 0;
+
 function porDia(d){
   const dia = d.getDate(), mes = d.getMonth();
+
+  // rendimento do dinheiro parado, creditado todo dia
+  const rend = rendeHoje();
+  if(rend >= 0.01){
+    S.dinheiro += rend;
+    S.rendMes = (S.rendMes||0) + rend;
+    S.rendTotal = (S.rendTotal||0) + rend;
+  }
 
   // corpo
   S.b.corpo = cl(S.b.corpo + CFG.corpoParado, 0, 100);
@@ -780,7 +795,8 @@ function porDia(d){
     S.mercadoMes = r < .25 ? 'bom' : (r < .75 ? 'normal' : 'ruim');
     const m = CFG.mercados[S.mercadoMes];
     S.custoLead = Math.round(rnd(m.custoMin, m.custoMax));
-    S.faturadoMes = 0; S.gastoLeadsMes = 0;
+    if(S.rendMes >= 1){ ex('Rendimento do mês', S.rendMes); toast('O dinheiro parado rendeu <b>'+fmt(S.rendMes)+'</b> no mês.','v'); }
+    S.faturadoMes = 0; S.gastoLeadsMes = 0; S.rendMes = 0;
     const txt = {bom:'Mês bom. Lead barato e gente séria aparecendo.',
       normal:'Mês normal. Nada de mais.',
       ruim:'<b>Mês ruim.</b> Lead caro, pouco e de má qualidade. Segura a onda.'};
@@ -1797,6 +1813,16 @@ function renderGrana(){
     <div class="big" style="color:${S.dinheiro<0?'var(--vermelho)':'var(--verde)'}">${fmt(S.dinheiro)}</div>
     <div class="meta" style="margin-top:6px">Faturado neste mês <b>${fmt(S.faturadoMes)}</b> · gasto com lead <b>${fmt(S.gastoLeadsMes)}</b></div>
   </div>`;
+
+  h += `<div class="secTit">Rendimento</div>
+    <div class="card ${S.dinheiro>0?'good':''}">
+      <div class="cardTop"><h3>Dinheiro parado rende</h3><span class="pill ${S.dinheiro>0?'v':''}">1% ao mês</span></div>
+      <div class="meta">Cai na conta todo dia, sobre o saldo daquele dia, igual ao cofrinho do Mercado Pago.</div>
+      <div class="kv" style="margin-top:8px"><span>Hoje rende</span><span style="color:var(--verde)">${S.dinheiro>0?'+ '+fmt(rendeHoje()):'nada, conta zerada'}</span></div>
+      <div class="kv"><span>Acumulado no mês</span><span>${fmt(S.rendMes||0)}</span></div>
+      <div class="kv"><span>Desde o começo</span><span>${fmt(S.rendTotal||0)}</span></div>
+      <div class="meta" style="margin-top:7px;color:var(--texto3)">Só o saldo positivo rende. A dívida corre por fora, e mais rápido.</div>
+    </div>`;
 
   h += `<div class="secTit">Contas do dia 5</div>
     <div class="card ${diasPra5<=3 && S.dinheiro<total ? 'bad':''}">
