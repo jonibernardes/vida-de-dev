@@ -47,7 +47,7 @@ bash deploy.sh
 ## Como o servidor guarda as coisas
 
 ```
-u:<email>     conta — salt e hash PBKDF2 de 120 mil rodadas. A senha nunca é guardada
+u:<email>     conta — salt e hash PBKDF2 de 100 mil rodadas. A senha nunca é guardada
 s:<token>     sessão, vence em 90 dias
 g:<email>     a partida, em JSON
 ```
