@@ -75,16 +75,40 @@ h1,h2,h3{font-family:'Bricolage Grotesque',system-ui,sans-serif; margin:0; text-
 .miniBar i{display:block; height:100%; border-radius:3px; background:var(--roxo)}
 
 /* vitais sempre visíveis */
-#vitais{display:flex; gap:3px; width:100%; text-align:left}
-#vitais span{
+#vitais{display:flex; gap:3px; width:100%}
+#vitais button{
   flex:1; background:var(--carta); border-radius:8px; padding:3px 1px 4px;
   display:flex; flex-direction:column; align-items:center; line-height:1.15;
   border-bottom:2px solid transparent;
 }
-#vitais span i{font-style:normal; font-size:11px; opacity:.85}
-#vitais span u{
+#vitais button:active{transform:scale(.94)}
+#vitais button i{font-style:normal; font-size:11px; opacity:.85}
+#vitais button u{
   text-decoration:none; font-family:'DM Mono',monospace; font-size:11.5px; font-weight:500;
   font-variant-numeric:tabular-nums;
+}
+/* painel de cada barra */
+.vTopo{display:flex; align-items:center; gap:11px; margin-bottom:12px}
+.vTopo .ico{font-size:27px; line-height:1}
+.vTopo .num{font-family:'Bricolage Grotesque'; font-size:31px; font-weight:800; letter-spacing:-1px; line-height:1}
+.vTopo .lado{flex:1}
+.vTopo .rot{font-size:11px; text-transform:uppercase; letter-spacing:.9px; color:var(--texto3); font-weight:700}
+.linhas{display:flex; flex-direction:column; gap:1px}
+.linha{display:flex; gap:9px; align-items:baseline; padding:6px 0; border-bottom:1px solid var(--linha)}
+.linha:last-child{border-bottom:0}
+.linha .o{flex:1; font-size:12.5px; line-height:1.4}
+.linha .q{
+  font-family:'DM Mono',monospace; font-size:11.5px; font-weight:500; white-space:nowrap;
+  font-variant-numeric:tabular-nums;
+}
+.q.up{color:var(--verde)} .q.dn{color:var(--vermelho)}
+.alerta{
+  background:rgba(224,80,58,.13); border-left:3px solid var(--vermelho); border-radius:9px;
+  padding:9px 11px; font-size:12px; line-height:1.5; margin-top:4px;
+}
+.calmo{
+  background:rgba(76,175,125,.11); border-left:3px solid var(--verde); border-radius:9px;
+  padding:9px 11px; font-size:12px; line-height:1.5; margin-top:4px;
 }
 
 /* ---------- views ---------- */
@@ -1544,6 +1568,65 @@ const VITAIS = [
   {k:'casamento', ic:'❤️', n:'Casamento'},
   {k:'estresse',  ic:'😰', n:'Estresse', invertido:true},
 ];
+// o que mexe em cada barra, com os numeros que o jogo usa de verdade
+const AJUDA = {
+  energia: {
+    onde: 'Cama, no quarto',
+    sobe: [['Dormir até de manhã', '+12 por hora'], ['Cochilo de 2 horas', '+24']],
+    desce: [['Ficar acordado', '−4 por hora'], ['Corpo abaixo de 40', 'cai 25% mais rápido'],
+            ['Ajudar a Tania na limpeza', '−30'], ['Buscar a Tania de madrugada', '−14'], ['Gripe', '−35']],
+    baixo: 'Abaixo de 30 você trabalha 40% mais devagar. É o jeito mais caro de perder dinheiro.',
+  },
+  fome: {
+    onde: 'Fogão e geladeira, na cozinha',
+    sobe: [['Cozinhar e comer', '+60'], ['Delivery', '+30, R$ 45 e −2 de corpo']],
+    desce: [['O tempo passando', '−5 por hora']],
+    baixo: 'Abaixo de 20 ela derruba energia e ânimo junto. Despensa vazia não deixa cozinhar.',
+  },
+  higiene: {
+    onde: 'Chuveiro, no banheiro',
+    sobe: [['Tomar banho', '+70 em 20 minutos']],
+    desce: [['O tempo passando', '−3 por hora'], ['Sair pra correr', '−25']],
+    baixo: 'Abaixo de 25 a reunião perde 18% de chance. O cliente percebe.',
+  },
+  animo: {
+    onde: 'Sofá, TV e tempo com a Tania',
+    sobe: [['Ver TV por 1 hora', '+9'], ['Entregar um projeto', '+8'], ['Aniversário na família', '+10'],
+           ['Tempo com a Tania', '+6'], ['Sair pra correr', '+5'], ['Limpar a casa', '+4'],
+           ['Banho', '+3'], ['Comida feita em casa', '+2']],
+    desce: [['O tempo passando', '−1,5 por hora'], ['Casa suja acima de 60', '−0,7 por hora'],
+            ['Estresse acima de 80', '−0,9 por hora'], ['Casamento abaixo de 30', '−0,8 por hora'],
+            ['Higiene abaixo de 25', '−0,5 por hora'], ['Cobrança do agiota', '−12'], ['Gripe', '−8']],
+    baixo: 'Abaixo de 30 tudo rende 25% menos. Abaixo de 10 por dois dias você trava, rende 40% e não conduz reunião nenhuma. Sai só com descanso, a 3 pontos por dia.',
+  },
+  corpo: {
+    onde: 'Porta de casa, correndo na rua',
+    sobe: [['Sair pra correr', '+9 por corrida']],
+    desce: [['Um dia sem se mexer', '−0,7'], ['Comer delivery', '−2']],
+    baixo: 'Abaixo de 40 sua energia cai 25% mais rápido o dia inteiro. É juros compostos contra você.',
+  },
+  casamento: {
+    onde: 'Cozinha e sofá, com a Tania',
+    sobe: [['Ficar com a Tania', '+22'], ['Café com a Tania', '+22'],
+           ['Ajudar na limpeza de quinta ou sábado', '+18'], ['Ir ao aniversário', '+12'],
+           ['Buscar ela na balada', '+10']],
+    desce: [['Um dia sem dar atenção', '−3'], ['Não buscar ela', '−14'],
+            ['Não ajudar na limpeza', '−12'], ['Faltar no aniversário', '−10']],
+    baixo: 'Abaixo de 30 ela cobra, e a cobrança derruba seu ânimo 0,8 por hora.',
+  },
+  estresse: {
+    onde: 'Corrida, TV e resolver o que está aberto',
+    sobe: [['Cada projeto atrasado', '+2 por dia'], ['Cada chamado sem resposta', '+3 por dia'],
+           ['A cada R$ 5 mil de dívida', '+1 por dia'], ['Cada reclamação aberta', '+5 por dia'],
+           ['Cobrança do agiota', '+20'], ['Faltar dinheiro no dia 5', '+12'],
+           ['Responder o Reclame Aqui', '+5'], ['Cada follow-up no zap', '+1']],
+    desce: [['Sair pra correr', '−8'], ['Tempo com a Tania', '−10'], ['Ver TV', '−4'],
+            ['Noite dormida', '−0,6 por hora']],
+    baixo: 'Acima de 85 você entra em ansiedade: rende 15% menos e dorme mal. Esta é a única barra em que número alto é ruim.',
+    invertido: true,
+  },
+};
+
 function corVital(v, invertido){
   const b = invertido ? 100-v : v;
   return b >= 60 ? 'var(--verde)' : (b >= 30 ? 'var(--laranja)' : 'var(--vermelho)');
@@ -1590,10 +1673,15 @@ function atualizarHud(){
   document.getElementById('cFama').querySelector('.v').textContent = estrelas().toFixed(1).replace('.',',')+'★';
 
   const vt = document.getElementById('vitais');
-  vt.innerHTML = VITAIS.map(v => {
+  const novo = VITAIS.map(v => {
     const val = Math.round(S.b[v.k]), c = corVital(val, v.invertido);
-    return `<span style="border-bottom-color:${c}"><i>${v.ic}</i><u style="color:${c}">${val}</u></span>`;
+    return `<button data-v="${v.k}" title="${v.n}" style="border-bottom-color:${c}"><i>${v.ic}</i><u style="color:${c}">${val}</u></button>`;
   }).join('');
+  if(vt.dataset.hash !== novo){
+    vt.dataset.hash = novo;
+    vt.innerHTML = novo;
+    vt.querySelectorAll('[data-v]').forEach(b => b.onclick = () => abrirVital(b.dataset.v));
+  }
 
   const doing = document.getElementById('doing');
   if(S.fazendo){
@@ -1925,6 +2013,50 @@ const BARRAS = [
   {k:'corpo', n:'Corpo', c:'#E0503A', baixo:'Abaixo de 40 sua energia máxima cai.'},
   {k:'casamento', n:'Casamento', c:'#E07A9B', baixo:'Abaixo de 30 ela cobra, e cobra caro.'},
 ];
+function abrirVital(k){
+  const v = VITAIS.find(x => x.k === k), a = AJUDA[k];
+  if(!v || !a) return;
+  const val = Math.round(S.b[k]), c = corVital(val, v.invertido);
+  const ruim = v.invertido ? val > 85 : val < 30;
+
+  const lista = (itens, dir) => `<div class="linhas">${itens.map(([o,q]) =>
+    `<div class="linha"><span class="o">${o}</span><span class="q ${dir}">${q}</span></div>`).join('')}</div>`;
+
+  const box = document.getElementById('sheetBox');
+  box.className = '';
+  box.innerHTML = `
+    <div class="sheetHead" style="padding:2px 0 10px">
+      <h2>${v.n}</h2>
+      <button class="fechar" id="xF" aria-label="Fechar">✕</button>
+    </div>
+    <div class="vTopo">
+      <span class="ico">${v.ic}</span>
+      <span class="lado">
+        <span class="rot">${v.invertido ? 'quanto menor, melhor' : 'quanto maior, melhor'}</span>
+        <div class="num" style="color:${c}">${val}</div>
+      </span>
+    </div>
+    <div class="bar" style="margin-bottom:14px">
+      <div class="t"><i style="width:${val}%;background:${c}"></i></div>
+    </div>
+
+    <div class="secTit" style="margin-top:0">${v.invertido ? 'O que derruba' : 'O que melhora'}</div>
+    ${lista(v.invertido ? a.desce : a.sobe, 'up')}
+
+    <div class="secTit">${v.invertido ? 'O que faz subir' : 'O que piora'}</div>
+    ${lista(v.invertido ? a.sobe : a.desce, 'dn')}
+
+    <div class="secTit">${ruim ? 'Está ruim agora' : 'Quando aperta'}</div>
+    <div class="${ruim ? 'alerta' : 'calmo'}">${a.baixo}</div>
+
+    <div class="meta" style="margin-top:14px;color:var(--texto3)">Onde mexer: <b style="color:var(--texto2)">${a.onde}</b></div>
+    <button class="linkBt" id="xTudo">Ver todas as barras e as habilidades</button>`;
+
+  document.getElementById('sheet').classList.add('on');
+  document.getElementById('xF').onclick = fecharSheet;
+  document.getElementById('xTudo').onclick = abrirVoce;
+}
+
 function abrirVoce(){
   const box = document.getElementById('sheetBox');
   box.className = '';
@@ -1949,15 +2081,17 @@ function renderVoce(){
       <div class="meta">Você erra mais e dorme mal. Corrida, TV e tempo com a Tania derrubam o estresse. Resolver pendência também.</div></div>`;
   }
 
-  h += `<div class="secTit">Barras</div><div class="card"><div class="bars">`;
+  h += `<div class="secTit">Barras <span class="n">toque pra ver o que mexe</span></div><div class="card"><div class="bars">`;
   BARRAS.forEach(b => {
     const v = S.b[b.k];
-    h += `<div class="bar"><div class="l"><span>${b.n}</span><span>${Math.round(v)}</span></div>
+    h += `<button class="bar" data-v="${b.k}" style="width:100%;text-align:left">
+      <div class="l"><span>${b.n} ›</span><span>${Math.round(v)}</span></div>
       <div class="t"><i style="width:${v}%;background:${v<25?'#E0503A':b.c}"></i></div>
-      ${v<30?`<div class="meta" style="margin-top:4px;color:var(--vermelho);font-size:11px">${b.baixo}</div>`:''}</div>`;
+      ${v<30?`<div class="meta" style="margin-top:4px;color:var(--vermelho);font-size:11px">${b.baixo}</div>`:''}</button>`;
   });
-  h += `<div class="bar"><div class="l"><span>Estresse</span><span>${Math.round(S.b.estresse)}</span></div>
-    <div class="t"><i style="width:${S.b.estresse}%;background:${S.b.estresse>85?'#E0503A':'#8E6BD9'}"></i></div></div>`;
+  h += `<button class="bar" data-v="estresse" style="width:100%;text-align:left">
+    <div class="l"><span>Estresse ›</span><span>${Math.round(S.b.estresse)}</span></div>
+    <div class="t"><i style="width:${S.b.estresse}%;background:${S.b.estresse>85?'#E0503A':'#8E6BD9'}"></i></div></button>`;
   h += `</div></div>`;
 
   h += `<div class="secTit">Habilidades</div><div class="card"><div class="bars">
@@ -1990,6 +2124,7 @@ function renderVoce(){
   h += `<div class="saveTag" id="saveTag">salvo neste aparelho</div>`;
 
   el.innerHTML = h;
+  el.querySelectorAll('[data-v]').forEach(b => b.onclick = () => abrirVital(b.dataset.v));
   document.getElementById('btReset').onclick = () => {
     sheet('<h2>Recomeçar do zero?</h2><div class="sub">A partida de <b>'+(perfilAtual||'você')+'</b> some: dinheiro, clientes, reputação, tudo. Não tem volta.</div>', [
       {ic:'🗑️', n:'Sim, apagar e recomeçar', click:()=>{
@@ -2229,7 +2364,6 @@ function comecar(){
   S.vel = 0;                       // o relogio so anda depois que alguem entra
   S.ultimoMes = agora().getMonth();
   document.getElementById('doStop').onclick = pararAcao;
-  document.getElementById('vitais').onclick = abrirVoce;
   window.addEventListener('resize', ajustarCanvas);
   window.addEventListener('beforeunload', () => salvar(true));
   requestAnimationFrame(loop);
@@ -2245,6 +2379,9 @@ function comecar(){
     irPara(aba ? aba.id : 'casa');
     ajustarCanvas();
     if(atalho.includes('mesa')) abrirMesa();
+    const vital = atalho.find(x => AJUDA[x]);
+    if(vital) abrirVital(vital);
+    if(atalho.includes('voce')) abrirVoce();
     return;
   }
 
