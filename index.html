@@ -1007,15 +1007,24 @@ function ex(desc, v, divida){
 const cv = document.getElementById('house');
 const cx = cv.getContext('2d');
 const W = 400, H = 660;
-let escala = 1;
+let escala = 1, alturaLog = H, offY = 0;
 
 function ajustarCanvas(){
-  const w = cv.parentElement.clientWidth || 400;
+  const box = document.getElementById('v-casa');
+  const w = Math.round(box.getBoundingClientRect().width) || 400;
+  const hd = Math.round(box.getBoundingClientRect().height) || 660;
   escala = w/W;
+  alturaLog = Math.max(H, hd/escala);
+  offY = (alturaLog - H)/2;
   const dpr = Math.min(window.devicePixelRatio||1, 2.5);
-  cv.width = W*escala*dpr; cv.height = H*escala*dpr;
-  cv.style.height = (H*escala)+'px';
+  cv.width = Math.round(W*escala*dpr); cv.height = Math.round(alturaLog*escala*dpr);
+  cv.style.width = w+'px';
+  cv.style.height = (alturaLog*escala)+'px';
   cx.setTransform(escala*dpr, 0, 0, escala*dpr, 0, 0);
+}
+if(window.ResizeObserver){
+  new ResizeObserver(() => { if(abaAtual === 'casa') ajustarCanvas(); })
+    .observe(document.getElementById('v-casa'));
 }
 
 const COMODOS = [
@@ -1078,18 +1087,23 @@ function desenharCasa(){
   bounce += 0.06;
   const ceu = corCeu(), luz = luzInterna();
 
-  cx.clearRect(0,0,W,H);
-  fill(ceu, 0,0,W,H);
+  cx.setTransform(1,0,0,1,0,0);
+  cx.clearRect(0,0,cv.width,cv.height);
+  const dpr = Math.min(window.devicePixelRatio||1, 2.5);
+  cx.setTransform(escala*dpr, 0, 0, escala*dpr, 0, 0);
+  fill(ceu, 0, 0, W, alturaLog);
 
   // estrelas de madrugada
   const h = hDia();
   if(h < 5.5 || h > 20){
     cx.fillStyle = 'rgba(255,255,255,.55)';
-    for(let i=0;i<26;i++){
-      const sx = (i*97)%W, sy = (i*53)%H;
+    for(let i=0;i<34;i++){
+      const sx = (i*97)%W, sy = (i*53)%Math.round(alturaLog);
       cx.fillRect(sx, sy, 1.6, 1.6);
     }
   }
+  cx.save();
+  cx.translate(0, offY);
 
   COMODOS.forEach((c, i) => {
     const hh = c.y1 - c.y0;
@@ -1135,6 +1149,7 @@ function desenharCasa(){
     const m = MOVEIS.find(x=>x.id===tocado.id);
     if(m){ cx.strokeStyle = 'rgba(242,160,61,.9)'; cx.lineWidth = 2.5; rr(m.x-4,m.y-4,m.w+8,m.h+8,10); cx.stroke(); }
   }
+  cx.restore();
 }
 
 function janela(x,y,w,h,ceu){
@@ -1335,7 +1350,7 @@ function desenharBoneco(){
 let tocado = null;
 cv.addEventListener('click', e => {
   const r = cv.getBoundingClientRect();
-  const x = (e.clientX - r.left)/escala, y = (e.clientY - r.top)/escala;
+  const x = (e.clientX - r.left)/escala, y = (e.clientY - r.top)/escala - offY;
   const m = MOVEIS.find(o => x >= o.x-6 && x <= o.x+o.w+6 && y >= o.y-6 && y <= o.y+o.h+6);
   if(!m) return;
   tocado = {id:m.id, until: performance.now()+400};
