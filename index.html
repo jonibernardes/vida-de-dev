@@ -62,6 +62,27 @@ h1,h2,h3{font-family:'Bricolage Grotesque',system-ui,sans-serif; margin:0; text-
   font-family:'DM Mono',monospace; min-width:26px;
 }
 .spd button.on{background:var(--laranja); color:#231603}
+#btSom{font-size:15px; padding:3px 4px; border-radius:8px; background:var(--carta); line-height:1}
+#btSom.mudo{opacity:.35}
+
+/* ---------- efeitos ---------- */
+#fx{position:absolute; inset:0; width:100%; height:100%; pointer-events:none; z-index:70}
+#flash{
+  position:absolute; inset:0; pointer-events:none; z-index:68; opacity:0;
+  background:radial-gradient(ellipse at center, rgba(224,80,58,0) 30%, rgba(224,80,58,.55) 100%);
+}
+#flash.bate{animation:bate .5s ease-out}
+#flash.bom{background:radial-gradient(ellipse at center, rgba(76,175,125,0) 35%, rgba(76,175,125,.4) 100%)}
+@keyframes bate{0%{opacity:0}18%{opacity:1}100%{opacity:0}}
+#app.treme{animation:treme .42s cubic-bezier(.36,.07,.19,.97)}
+@keyframes treme{
+  10%,90%{transform:translateX(-2px)} 20%,80%{transform:translateX(4px)}
+  30%,50%,70%{transform:translateX(-7px)} 40%,60%{transform:translateX(7px)}
+}
+@media (prefers-reduced-motion:reduce){
+  #app.treme{animation:none} #flash.bate{animation:pisca .5s}
+  @keyframes pisca{0%,100%{opacity:0}30%{opacity:.7}}
+}
 .hudBot{display:flex; gap:6px}
 .chip{
   flex:1; background:var(--carta); border-radius:var(--r2); padding:4px 7px;
@@ -319,6 +340,7 @@ input[type=email]{
         <div class="data" id="hData">seg, 2 de março</div>
       </div>
       <div class="spd" id="spd"></div>
+      <button id="btSom" aria-label="Som">🔊</button>
     </div>
     <div class="hudBot">
       <div class="chip" id="cGrana"><div class="k">Conta</div><div class="v">R$ 0</div></div>
@@ -347,6 +369,8 @@ input[type=email]{
   </div>
 
   <nav id="tabs"></nav>
+  <canvas id="fx"></canvas>
+  <div id="flash"></div>
   <div id="toasts"></div>
 
   <div id="sheet"><div id="sheetBox"></div></div>
@@ -535,6 +559,7 @@ function ocupado(){ return !!S.fazendo; }
 function iniciar(tipo, label, sub, horas, dados){
   if(ocupado()) return toast('Você já está no meio de outra coisa.','r');
   S.fazendo = {tipo, label, sub, ini:S.t, fim:S.t+horas, dados: dados||{}};
+  som('toc');
   if(S.vel === 0) setVel(3);
   render();
 }
@@ -630,6 +655,12 @@ function avancar(dt){
   if(b.higiene < 25) da -= 0.5;
   if(b.casamento < 30) da -= 0.8;
   if(b.estresse > 80) da -= 0.9;
+  // fila cheia pesa: cada projeto além do terceiro, e cada atraso, derruba o ânimo
+  const abertos = S.projetos.length;
+  const atrasados = S.projetos.filter(p => S.t > p.prazo).length;
+  if(abertos > 3) da -= 0.3*(abertos - 3);
+  da -= 0.6*atrasados;
+  if(S.chamados.length > 1) da -= 0.25*(S.chamados.length - 1);
   if(!dormindo && S.fazendo && S.fazendo.tipo === 'tv') da = 0;
   b.animo = cl(b.animo + da*dt, 0, 100);
 
@@ -642,7 +673,7 @@ function avancar(dt){
   if(b.animo < 10) S.animoBaixoH += dt; else S.animoBaixoH = Math.max(0, S.animoBaixoH - dt*2);
   if(!S.depre && S.animoBaixoH >= 48){
     S.depre = true;
-    toast('<b>Você travou.</b> Semanas ignorando tudo cobraram o preço. Descanso é o único caminho, e ele é lento.','r', 9000);
+    toast('<b>Você travou.</b> Semanas ignorando tudo cobraram o preço. Descanso é o único caminho, e ele é lento.','r', 9000, 'travou');
   }
   if(S.depre){
     if(descansando()) b.animo = cl(b.animo + 3*(dt/24), 0, 100);
@@ -848,7 +879,7 @@ function cobrarContas(){
   const total = CFG.contas.reduce((a,c) => a+c.v, 0);
   if(S.dinheiro >= total){
     S.dinheiro -= total; ex('Contas do mês', -total);
-    toast('Contas do mês pagas: '+fmt(total)+'.','v');
+    toast('Contas do mês pagas: '+fmt(total)+'.','v', 4200, 'dinheiro');
   } else {
     const falta = total - Math.max(0, S.dinheiro);
     const pago = Math.max(0, S.dinheiro);
@@ -857,21 +888,21 @@ function cobrarContas(){
     ex('Contas do mês (parcial)', -pago);
     ex('Foi pra dívida', -falta, true);
     S.b.estresse = cl(S.b.estresse+12,0,100);
-    toast('<b>Faltou '+fmt(falta)+'</b> pras contas. Foi pra dívida — '+nomeFaixa(S.divida).nome+'.','r', 8000);
+    toast('<b>Faltou '+fmt(falta)+'</b> pras contas. Foi pra dívida — '+nomeFaixa(S.divida).nome+'.','r', 8000, 'divida');
   }
 }
 
 function cobrancaAgiota(){
   S.b.estresse = cl(S.b.estresse+20,0,100);
   S.b.animo = cl(S.b.animo-12,0,100);
-  toast('<b>O cara da grana ligou.</b> Não foi uma conversa boa.','r', 8000);
+  toast('<b>O cara da grana ligou.</b> Não foi uma conversa boa.','r', 8000, 'agiota');
 }
 
 function reclamar(cliente, motivo){
   if(S.ra.abertas.some(r => r.cliente === cliente)) return;
   S.ra.abertas.push({id:S.seq++, cliente, motivo, quando:S.t});
   S.b.estresse = cl(S.b.estresse+5,0,100);
-  toast('<b>Reclame Aqui:</b> '+cliente+' reclamou que você '+motivo+'.','r', 7000);
+  toast('<b>Reclame Aqui:</b> '+cliente+' reclamou que você '+motivo+'.','r', 7000, 'reclamacao');
 }
 
 /* ---------------- eventos ---------------- */
@@ -1038,7 +1069,7 @@ function fechar(l){
   S.projetos.push(p);
   l.st = 'perdido';
   zap(l.nome, 'Fechado! Pode começar.');
-  toast('<b>Fechou com '+l.empresa+'</b> por '+fmt(l.orcamento)+'. Entrada de '+fmt(entrada)+' na conta.','v', 7000);
+  toast('<b>Fechou com '+l.empresa+'</b> por '+fmt(l.orcamento)+'. Entrada de '+fmt(entrada)+' na conta.','v', 7000, 'venda');
 }
 
 function trabalhar(id, horas){
@@ -1061,7 +1092,7 @@ function entregar(id){
   S.entregues.push({id:p.id, cliente:p.cliente, contato:p.contato, classe:p.classe, satisfacao:sat, quando:S.t, avaliado:false});
   S.projetos = S.projetos.filter(x => x.id !== id);
   S.b.animo = cl(S.b.animo+8,0,100);
-  toast('<b>Entregue.</b> '+fmt(resto)+' na conta. Satisfação do cliente: '+Math.round(sat)+'.','v', 7000);
+  toast('<b>Entregue.</b> '+fmt(resto)+' na conta. Satisfação do cliente: '+Math.round(sat)+'.','v', 7000, 'entrega');
   if(sat < 30) reclamar(p.cliente, 'entregou um sistema ruim');
   render();
 }
@@ -1097,7 +1128,7 @@ function fimAvaliacao(id){
   else n = ri(1,2);
   S.google.soma += n; S.google.n++;
   const antes = estrelas();
-  if(n === 5) toast('<b>'+e.cliente+'</b> deu 5 estrelas. Média em '+antes.toFixed(1).replace('.',',')+'.','v');
+  if(n === 5) toast('<b>'+e.cliente+'</b> deu 5 estrelas. Média em '+antes.toFixed(1).replace('.',',')+'.','v', 5000, 'estrela');
   else toast('<b>'+e.cliente+'</b> deu '+n+' estrela'+(n>1?'s':'')+'. A média não volta mais ao que era.','r', 7000);
 }
 
@@ -1594,9 +1625,11 @@ const AJUDA = {
     sobe: [['Ver TV por 1 hora', '+9'], ['Entregar um projeto', '+8'], ['Aniversário na família', '+10'],
            ['Tempo com a Tania', '+6'], ['Sair pra correr', '+5'], ['Limpar a casa', '+4'],
            ['Banho', '+3'], ['Comida feita em casa', '+2']],
-    desce: [['O tempo passando', '−1,5 por hora'], ['Casa suja acima de 60', '−0,7 por hora'],
+    desce: [['O tempo passando', '−1,5 por hora'], ['Cada projeto atrasado', '−0,6 por hora'],
+            ['Cada projeto aberto além do 3º', '−0,3 por hora'], ['Cada chamado além do 1º', '−0,25 por hora'],
             ['Estresse acima de 80', '−0,9 por hora'], ['Casamento abaixo de 30', '−0,8 por hora'],
-            ['Higiene abaixo de 25', '−0,5 por hora'], ['Cobrança do agiota', '−12'], ['Gripe', '−8']],
+            ['Casa suja acima de 60', '−0,7 por hora'], ['Higiene abaixo de 25', '−0,5 por hora'],
+            ['Cobrança do agiota', '−12'], ['Gripe', '−8']],
     baixo: 'Abaixo de 30 tudo rende 25% menos. Abaixo de 10 por dois dias você trava, rende 40% e não conduz reunião nenhuma. Sai só com descanso, a 3 pontos por dia.',
   },
   corpo: {
@@ -2013,6 +2046,24 @@ const BARRAS = [
   {k:'corpo', n:'Corpo', c:'#E0503A', baixo:'Abaixo de 40 sua energia máxima cai.'},
   {k:'casamento', n:'Casamento', c:'#E07A9B', baixo:'Abaixo de 30 ela cobra, e cobra caro.'},
 ];
+// quanto a fila de trabalho está tirando do ânimo neste momento
+function cargaAgora(){
+  const abertos = S.projetos.length;
+  const atrasados = S.projetos.filter(p => S.t > p.prazo).length;
+  const excesso = Math.max(0, abertos - 3);
+  const chamados = Math.max(0, S.chamados.length - 1);
+  const perda = 0.3*excesso + 0.6*atrasados + 0.25*chamados;
+  if(perda <= 0) return `<div class="secTit">Sua fila agora</div>
+    <div class="calmo">${abertos} projeto${abertos===1?'':'s'} aberto${abertos===1?'':'s'} e nenhum atrasado. A fila não está pesando no seu ânimo.</div>`;
+  const l = [];
+  if(atrasados) l.push(`${atrasados} projeto${atrasados>1?'s':''} atrasado${atrasados>1?'s':''}`);
+  if(excesso) l.push(`${excesso} projeto${excesso>1?'s':''} além do terceiro`);
+  if(chamados) l.push(`${chamados} chamado${chamados>1?'s':''} além do primeiro`);
+  return `<div class="secTit">Sua fila agora</div>
+    <div class="alerta">${l.join(', ')} — isso tira <b>${perda.toFixed(2).replace('.',',')} de ânimo por hora</b>,
+    ou ${(perda*24).toFixed(0)} por dia. Entregar ou fechar chamado devolve o ânimo na hora.</div>`;
+}
+
 function abrirVital(k){
   const v = VITAIS.find(x => x.k === k), a = AJUDA[k];
   if(!v || !a) return;
@@ -2045,6 +2096,8 @@ function abrirVital(k){
 
     <div class="secTit">${v.invertido ? 'O que faz subir' : 'O que piora'}</div>
     ${lista(v.invertido ? a.sobe : a.desce, 'dn')}
+
+    ${k === 'animo' ? cargaAgora() : ''}
 
     <div class="secTit">${ruim ? 'Está ruim agora' : 'Quando aperta'}</div>
     <div class="${ruim ? 'alerta' : 'calmo'}">${a.baixo}</div>
@@ -2165,7 +2218,164 @@ function fecharSheet(){
 }
 document.getElementById('sheet').addEventListener('click', e => { if(e.target.id === 'sheet') fecharSheet(); });
 
-function toast(txt, tipo, ms){
+/* ============================================================
+   EFEITOS — confete, susto e som
+   ============================================================ */
+const K_SOM = 'vidadedev.som';
+let somLigado = (() => { try{ return localStorage.getItem(K_SOM) !== 'off'; }catch(e){ return true; } })();
+let ac = null;
+const menosMovimento = () => window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+function audio(){
+  if(!somLigado) return null;
+  try{
+    if(!ac) ac = new (window.AudioContext || window.webkitAudioContext)();
+    if(ac.state === 'suspended') ac.resume();
+    return ac;
+  }catch(e){ return null; }
+}
+
+// uma nota: frequencia inicial, final, duracao, timbre, volume e atraso
+function nota(f1, f2, dur, tipo, vol, atraso){
+  const a = audio(); if(!a) return;
+  const t = a.currentTime + (atraso||0);
+  const o = a.createOscillator(), g = a.createGain();
+  o.type = tipo || 'sine';
+  o.frequency.setValueAtTime(f1, t);
+  if(f2 && f2 !== f1) o.frequency.exponentialRampToValueAtTime(Math.max(30, f2), t + dur);
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(vol || 0.14, t + 0.012);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(g); g.connect(a.destination);
+  o.start(t); o.stop(t + dur + 0.03);
+}
+
+const SONS = {
+  toc:     () => nota(520, 380, .05, 'triangle', .05),
+  bom:     () => { nota(660,660,.10,'triangle',.10,0); nota(880,880,.14,'triangle',.10,.08); },
+  grana:   () => { [784,988,1175,1568].forEach((f,i)=>nota(f,f,.13,'triangle',.11,i*.07)); },
+  entrega: () => { [523,659,784,1047].forEach((f,i)=>nota(f,f,.18,'sine',.12,i*.09)); nota(1568,1568,.5,'sine',.05,.36); },
+  estrela: () => { [1047,1319,1568,2093].forEach((f,i)=>nota(f,f,.11,'sine',.09,i*.055)); },
+  ruim:    () => { nota(320,120,.34,'sawtooth',.11); nota(160,70,.42,'square',.06,.04); },
+  alerta:  () => { nota(440,440,.11,'square',.08,0); nota(370,370,.15,'square',.08,.14); },
+  agiota:  () => { nota(180,70,.55,'sawtooth',.14); nota(90,45,.7,'square',.09,.08); nota(120,60,.5,'sawtooth',.07,.3); },
+  moeda:   () => { nota(1319,1319,.07,'square',.07,0); nota(1760,1760,.13,'square',.07,.06); },
+};
+const som = n => { try{ (SONS[n]||SONS.toc)(); }catch(e){} };
+
+// ---------- confete ----------
+const fx = document.getElementById('fx');
+const fcx = fx.getContext('2d');
+let pecas = [], fxLigado = false;
+const CORES = ['#F2A03D','#4CAF7D','#4C8FD6','#E07A9B','#8E6BD9','#EFE3D0','#E0503A'];
+
+function ajustarFx(){
+  const r = fx.getBoundingClientRect();
+  const dpr = Math.min(window.devicePixelRatio||1, 2);
+  fx.width = Math.max(1, Math.round(r.width*dpr));
+  fx.height = Math.max(1, Math.round(r.height*dpr));
+  fcx.setTransform(dpr,0,0,dpr,0,0);
+}
+
+function festa(qtd){
+  const r = fx.getBoundingClientRect();
+  if(!r.width) return;
+  ajustarFx();
+  const n = menosMovimento() ? 14 : (qtd || 70);
+  for(let i=0;i<n;i++){
+    pecas.push({
+      x: r.width*(.15 + Math.random()*.7),
+      y: r.height*(.28 + Math.random()*.12),
+      vx: (Math.random()-.5)*7,
+      vy: -4.5 - Math.random()*7,
+      g: .22 + Math.random()*.1,
+      l: 5 + Math.random()*6,
+      a: 3 + Math.random()*5,
+      cor: CORES[(Math.random()*CORES.length)|0],
+      rot: Math.random()*Math.PI,
+      vr: (Math.random()-.5)*.35,
+      vida: 1,
+    });
+  }
+  if(!fxLigado){ fxLigado = true; requestAnimationFrame(rodarFx); }
+}
+
+function rodarFx(){
+  const r = fx.getBoundingClientRect();
+  fcx.clearRect(0,0,r.width,r.height);
+  pecas = pecas.filter(p => p.vida > 0 && p.y < r.height + 30);
+  pecas.forEach(p => {
+    p.vx *= .995; p.vy += p.g; p.x += p.vx; p.y += p.vy; p.rot += p.vr; p.vida -= .0055;
+    fcx.save();
+    fcx.translate(p.x, p.y); fcx.rotate(p.rot);
+    fcx.globalAlpha = Math.max(0, Math.min(1, p.vida));
+    fcx.fillStyle = p.cor;
+    fcx.fillRect(-p.l/2, -p.a/2, p.l, p.a);
+    fcx.restore();
+  });
+  if(pecas.length) requestAnimationFrame(rodarFx);
+  else { fcx.clearRect(0,0,r.width,r.height); fxLigado = false; }
+}
+
+// ---------- susto ----------
+let sustoTimer = null;
+function susto(forte){
+  const fl = document.getElementById('flash'), ap = document.getElementById('app');
+  fl.classList.remove('bate','bom'); void fl.offsetWidth;
+  fl.classList.add('bate');
+  if(forte && !menosMovimento()){
+    ap.classList.remove('treme'); void ap.offsetWidth; ap.classList.add('treme');
+    clearTimeout(sustoTimer);
+    sustoTimer = setTimeout(() => ap.classList.remove('treme'), 520);
+  }
+}
+function brilho(){
+  const fl = document.getElementById('flash');
+  fl.classList.remove('bate'); void fl.offsetWidth;
+  fl.classList.add('bom','bate');
+  setTimeout(() => fl.classList.remove('bom'), 540);
+}
+
+// o momento manda no efeito: cada um tem confete, cor e som próprios
+function comemorar(qual){
+  switch(qual){
+    case 'venda':    festa(90); brilho(); som('grana'); break;
+    case 'entrega':  festa(115); brilho(); som('entrega'); break;
+    case 'estrela':  festa(70); brilho(); som('estrela'); break;
+    case 'dinheiro': brilho(); som('moeda'); break;
+    default:         brilho(); som('bom');
+  }
+}
+function doer(qual){
+  switch(qual){
+    case 'agiota':     susto(true); som('agiota'); break;
+    case 'travou':     susto(true); som('agiota'); break;
+    case 'divida':     susto(true); som('ruim'); break;
+    case 'reclamacao': susto(true); som('ruim'); break;
+    default:           susto(false); som('ruim');
+  }
+}
+
+function ligarSom(){
+  const b = document.getElementById('btSom');
+  b.textContent = somLigado ? '🔊' : '🔇';
+  b.classList.toggle('mudo', !somLigado);
+  b.onclick = () => {
+    somLigado = !somLigado;
+    try{ localStorage.setItem(K_SOM, somLigado ? 'on' : 'off'); }catch(e){}
+    ligarSom();
+    if(somLigado) som('bom');
+  };
+}
+
+/* ---------- toast ---------- */
+const EFEITOS_BONS = ['venda','entrega','estrela','dinheiro'];
+function toast(txt, tipo, ms, efeito){
+  // com efeito nomeado usa o dele; sem, cai no efeito padrão do tipo
+  if(efeito) (EFEITOS_BONS.includes(efeito) ? comemorar : doer)(efeito);
+  else if(tipo === 'v'){ brilho(); som('bom'); }
+  else if(tipo === 'r'){ susto(false); som('ruim'); }
+  else if(tipo === 'x') som('alerta');
   const el = document.createElement('div');
   el.className = 'toast ' + (tipo||'');
   el.innerHTML = txt;
@@ -2364,7 +2574,8 @@ function comecar(){
   S.vel = 0;                       // o relogio so anda depois que alguem entra
   S.ultimoMes = agora().getMonth();
   document.getElementById('doStop').onclick = pararAcao;
-  window.addEventListener('resize', ajustarCanvas);
+  ligarSom(); ajustarFx();
+  window.addEventListener('resize', () => { ajustarCanvas(); ajustarFx(); });
   window.addEventListener('beforeunload', () => salvar(true));
   requestAnimationFrame(loop);
 
@@ -2382,6 +2593,8 @@ function comecar(){
     const vital = atalho.find(x => AJUDA[x]);
     if(vital) abrirVital(vital);
     if(atalho.includes('voce')) abrirVoce();
+    if(atalho.includes('festa')) setInterval(() => { festa(60); brilho(); }, 800);
+    if(atalho.includes('susto')) setInterval(() => susto(true), 900);
     return;
   }
 
