@@ -4,6 +4,8 @@ Jogo de simulação em formato de celular. Você faz sistemas sob medida em casa
 
 **Jogue:** https://jonibernardes.github.io/vida-de-dev/
 
+**Servidor de contas:** https://vida-de-dev-api.jonibernardes.workers.dev — já no ar desde 07/09/2026, com o KV `VIDA_DE_DEV` na conta joni.bernardes@gmail.com. O `deploy.sh` abaixo serve pra subir de novo ou recriar em outra conta.
+
 ## O que tem aqui
 
 | Arquivo | O que é |
@@ -23,9 +25,9 @@ Cole na barra de endereço, depois do endereço do jogo:
 
 Vale `casa`, `mesa`, `zap`, `grana` e `fama`.
 
-## Subir o servidor de contas
+## Subir o servidor de novo
 
-Sem ele o jogo funciona, mas a partida fica só no aparelho. Com ele, a conta leva o jogo do celular pro computador.
+Ele já está no ar. Isto aqui é a receita pra recriar do zero, se um dia precisar.
 
 **1. Gere um token na Cloudflare** em https://dash.cloudflare.com/profile/api-tokens → *Create Token* → *Create Custom Token*, com estas três permissões:
 
