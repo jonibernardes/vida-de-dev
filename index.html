@@ -1882,7 +1882,8 @@ function comecar(){
   window.addEventListener('resize', ajustarCanvas);
   requestAnimationFrame(loop);
 
-  const atalho = (location.hash||'').replace('#','').split(/[,\-/]/).filter(Boolean);
+  const bruto = (location.hash||'').replace('#','') || (new URLSearchParams(location.search).get('v')||'');
+  const atalho = bruto.split(/[,\-/]/).filter(Boolean);
   if(atalho.length){
     const demo = atalho.includes('demo');
     if(demo) popularDemo();
