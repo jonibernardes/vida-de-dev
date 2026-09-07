@@ -1,0 +1,1910 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#1E2740">
+<meta name="description" content="Voce faz sistemas sob medida em casa e tenta pagar R$ 11 mil de contas todo mes sem se destruir.">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Vida de Dev">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8F%A0%3C/text%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8F%A0%3C/text%3E%3C/svg%3E">
+<title>Vida de Dev</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap">
+<style>
+html,body{height:100%;overflow:hidden;background:#0C1120}
+body{margin:0}
+</style>
+</head>
+<body>
+<style>
+:root{
+  --noite:#151C2E; --noite2:#1E2740; --carta:#232E4A; --carta2:#2B3757;
+  --linha:#3A4770; --texto:#EEF1F8; --texto2:#A3ADC8; --texto3:#6E7899;
+  --parede:#F2E2C9; --parede2:#E2CDAE; --piso:#C4854F; --piso2:#A96C3C;
+  --madeira:#8C5A33; --azulejo:#CFE3E6;
+  --laranja:#F2A03D; --verde:#4CAF7D; --vermelho:#E0503A; --roxo:#8E6BD9;
+  --azul:#4C8FD6; --rosa:#E07A9B;
+  --r:14px; --r2:10px;
+  color-scheme:dark;
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+body{
+  margin:0; background:#0C1120; color:var(--texto);
+  font-family:'Figtree',system-ui,-apple-system,sans-serif;
+  display:flex; justify-content:center; align-items:stretch;
+  min-height:100dvh; overscroll-behavior:none;
+}
+button{font:inherit; color:inherit; border:0; background:none; cursor:pointer}
+h1,h2,h3{font-family:'Bricolage Grotesque',system-ui,sans-serif; margin:0; text-wrap:balance}
+.mono{font-family:'DM Mono',ui-monospace,monospace; font-variant-numeric:tabular-nums}
+
+#app{
+  width:100%; max-width:430px; min-height:100dvh; height:100dvh;
+  background:var(--noite); display:flex; flex-direction:column;
+  position:relative; overflow:hidden;
+  box-shadow:0 0 80px rgba(0,0,0,.6);
+}
+
+/* ---------- HUD ---------- */
+#hud{
+  flex:0 0 auto; padding:8px 10px 7px; background:var(--noite2);
+  border-bottom:1px solid var(--linha); display:flex; flex-direction:column; gap:6px;
+}
+.hudTop{display:flex; align-items:center; gap:8px}
+.clock{
+  display:flex; align-items:baseline; gap:6px; flex:1; min-width:0;
+}
+.clock .hora{font-family:'Bricolage Grotesque'; font-weight:800; font-size:21px; letter-spacing:-.5px}
+.clock .data{font-size:11px; color:var(--texto2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.spd{display:flex; gap:3px; align-items:center; background:var(--carta); border-radius:9px; padding:3px}
+.spd button{
+  font-size:10px; font-weight:700; padding:3px 5px; border-radius:6px; color:var(--texto3);
+  font-family:'DM Mono',monospace; min-width:26px;
+}
+.spd button.on{background:var(--laranja); color:#231603}
+.hudBot{display:flex; gap:6px}
+.chip{
+  flex:1; background:var(--carta); border-radius:var(--r2); padding:4px 7px;
+  display:flex; flex-direction:column; gap:1px; min-width:0;
+}
+.chip .k{font-size:9px; text-transform:uppercase; letter-spacing:.7px; color:var(--texto3); font-weight:700}
+.chip .v{font-size:14px; font-weight:700; font-family:'DM Mono',monospace; white-space:nowrap}
+.chip.neg .v{color:var(--vermelho)}
+.chip.pos .v{color:var(--verde)}
+.miniBar{height:4px; border-radius:3px; background:var(--linha); overflow:hidden; margin-top:3px}
+.miniBar i{display:block; height:100%; border-radius:3px; background:var(--roxo)}
+
+/* ---------- views ---------- */
+#views{flex:1 1 auto; position:relative; overflow:hidden}
+.view{position:absolute; inset:0; overflow-y:auto; display:none; -webkit-overflow-scrolling:touch}
+.view.on{display:block}
+.pad{padding:12px 12px 20px}
+
+/* ---------- casa ---------- */
+#houseWrap{position:relative}
+#house{display:block; width:100%}
+.hint{
+  position:absolute; left:0; right:0; bottom:6px; text-align:center;
+  font-size:11px; color:var(--texto3); pointer-events:none;
+}
+
+/* ---------- abas ---------- */
+#tabs{
+  flex:0 0 auto; display:flex; background:var(--noite2); border-top:1px solid var(--linha);
+  padding-bottom:env(safe-area-inset-bottom);
+}
+#tabs button{
+  flex:1; padding:6px 2px 7px; display:flex; flex-direction:column; align-items:center; gap:2px;
+  font-size:9px; font-weight:700; color:var(--texto3); position:relative;
+}
+#tabs button .ic{font-size:17px; line-height:1}
+#tabs button.on{color:var(--laranja)}
+#tabs button.on::before{content:''; position:absolute; top:0; left:22%; right:22%; height:2px; background:var(--laranja); border-radius:0 0 3px 3px}
+.badge{
+  position:absolute; top:3px; right:calc(50% - 20px); background:var(--vermelho); color:#fff;
+  font-size:9px; font-weight:800; min-width:15px; height:15px; border-radius:8px;
+  display:flex; align-items:center; justify-content:center; padding:0 3px;
+}
+
+/* ---------- barra de ação em curso ---------- */
+#doing{
+  flex:0 0 auto; display:none; padding:7px 12px; background:var(--carta2);
+  border-top:1px solid var(--linha); align-items:center; gap:9px;
+}
+#doing.on{display:flex}
+#doing .txt{flex:1; min-width:0}
+#doing .t1{font-size:12px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+#doing .t2{font-size:10px; color:var(--texto2); font-family:'DM Mono',monospace}
+#doing .prog{height:5px; background:var(--linha); border-radius:3px; margin-top:4px; overflow:hidden}
+#doing .prog i{display:block; height:100%; background:var(--laranja); border-radius:3px; transition:width .2s}
+#doing .stop{font-size:11px; font-weight:700; color:var(--vermelho); padding:5px 8px; border:1px solid var(--vermelho); border-radius:8px}
+
+/* ---------- cartões ---------- */
+.card{background:var(--carta); border-radius:var(--r); padding:11px 12px; margin-bottom:9px}
+.card.warn{box-shadow:inset 3px 0 0 var(--laranja)}
+.card.bad{box-shadow:inset 3px 0 0 var(--vermelho)}
+.card.good{box-shadow:inset 3px 0 0 var(--verde)}
+.cardTop{display:flex; align-items:flex-start; gap:8px; margin-bottom:5px}
+.cardTop h3{font-size:14px; font-weight:700; flex:1; letter-spacing:-.2px}
+.pill{
+  font-size:9.5px; font-weight:800; text-transform:uppercase; letter-spacing:.6px;
+  padding:3px 7px; border-radius:20px; background:var(--linha); color:var(--texto2); white-space:nowrap;
+}
+.pill.o{background:rgba(242,160,61,.18); color:var(--laranja)}
+.pill.v{background:rgba(76,175,125,.18); color:var(--verde)}
+.pill.r{background:rgba(224,80,58,.2); color:var(--vermelho)}
+.pill.x{background:rgba(142,107,217,.2); color:var(--roxo)}
+.meta{font-size:11.5px; color:var(--texto2); line-height:1.5}
+.meta b{color:var(--texto); font-weight:600}
+.acts{display:flex; gap:6px; margin-top:9px; flex-wrap:wrap}
+.btn{
+  padding:7px 11px; border-radius:9px; background:var(--linha); font-size:12px; font-weight:700;
+}
+.btn:active{transform:scale(.97)}
+.btn.pri{background:var(--laranja); color:#231603}
+.btn.dan{background:rgba(224,80,58,.2); color:var(--vermelho)}
+.btn.gho{background:none; border:1px solid var(--linha); color:var(--texto2)}
+.btn[disabled]{opacity:.4}
+.secTit{
+  font-family:'Bricolage Grotesque'; font-size:12px; font-weight:700; text-transform:uppercase;
+  letter-spacing:1.1px; color:var(--texto3); margin:16px 0 8px; display:flex; align-items:center; gap:7px;
+}
+.secTit:first-child{margin-top:2px}
+.secTit .n{background:var(--linha); color:var(--texto2); border-radius:20px; padding:1px 7px; font-size:10px; letter-spacing:0}
+.vazio{color:var(--texto3); font-size:12px; padding:6px 2px 12px; line-height:1.55}
+.prog2{height:6px; background:var(--linha); border-radius:4px; overflow:hidden; margin-top:8px}
+.prog2 i{display:block; height:100%; background:var(--verde); border-radius:4px}
+
+/* ---------- barras da pessoa ---------- */
+.bars{display:flex; flex-direction:column; gap:9px}
+.bar .l{display:flex; justify-content:space-between; font-size:12px; margin-bottom:4px}
+.bar .l span:last-child{font-family:'DM Mono',monospace; color:var(--texto2); font-size:11px}
+.bar .t{height:9px; background:var(--noite2); border-radius:5px; overflow:hidden}
+.bar .t i{display:block; height:100%; border-radius:5px; transition:width .35s}
+
+/* ---------- modal ---------- */
+#sheet{
+  position:absolute; inset:0; background:rgba(6,10,20,.72); display:none;
+  align-items:flex-end; z-index:40; backdrop-filter:blur(2px);
+}
+#sheet.on{display:flex}
+#sheetBox{
+  width:100%; background:var(--noite2); border-radius:20px 20px 0 0; padding:14px 14px 22px;
+  max-height:88%; overflow-y:auto; border-top:1px solid var(--linha);
+  animation:up .22s cubic-bezier(.2,.9,.3,1);
+}
+@keyframes up{from{transform:translateY(30px); opacity:.4}}
+@media (prefers-reduced-motion:reduce){#sheetBox{animation:none}}
+#sheetBox h2{font-size:17px; margin-bottom:3px}
+#sheetBox .sub{font-size:12px; color:var(--texto2); margin-bottom:12px; line-height:1.5}
+.opt{
+  width:100%; text-align:left; background:var(--carta); border-radius:12px; padding:11px 12px;
+  margin-bottom:7px; display:flex; align-items:center; gap:11px;
+}
+.opt .ic{font-size:20px; width:24px; text-align:center}
+.opt .b{flex:1; min-width:0}
+.opt .b .n{font-size:14px; font-weight:700}
+.opt .b .d{font-size:11px; color:var(--texto2); margin-top:1px; line-height:1.4}
+.opt .c{font-size:11px; color:var(--texto3); font-family:'DM Mono',monospace; text-align:right; white-space:nowrap}
+.opt[disabled]{opacity:.45}
+input[type=number],input[type=text]{
+  width:100%; background:var(--carta); border:1px solid var(--linha); color:var(--texto);
+  border-radius:10px; padding:11px 12px; font-size:17px; font-family:'DM Mono',monospace; font-weight:500;
+}
+input[type=range]{width:100%; accent-color:var(--laranja)}
+label.f{display:block; font-size:11px; text-transform:uppercase; letter-spacing:.8px; color:var(--texto3); font-weight:700; margin:12px 0 5px}
+
+/* ---------- toast ---------- */
+#toasts{
+  position:absolute; left:8px; right:8px; top:8px; z-index:60;
+  display:flex; flex-direction:column; gap:6px; pointer-events:none;
+}
+.toast{
+  background:var(--carta2); border:1px solid var(--linha); border-radius:12px; padding:9px 12px;
+  font-size:12.5px; line-height:1.45; box-shadow:0 8px 24px rgba(0,0,0,.45);
+  animation:tin .25s; border-left:3px solid var(--laranja);
+}
+.toast.v{border-left-color:var(--verde)} .toast.r{border-left-color:var(--vermelho)}
+.toast.x{border-left-color:var(--roxo)} .toast b{font-weight:700}
+@keyframes tin{from{transform:translateY(-8px); opacity:0}}
+@media (prefers-reduced-motion:reduce){.toast{animation:none}}
+
+.stars{color:var(--laranja); letter-spacing:2px; font-size:15px}
+.kv{display:flex; justify-content:space-between; font-size:12.5px; padding:5px 0; border-bottom:1px solid var(--linha)}
+.kv:last-child{border-bottom:0}
+.kv span:last-child{font-family:'DM Mono',monospace; font-weight:500}
+.big{font-family:'Bricolage Grotesque'; font-size:27px; font-weight:800; letter-spacing:-1px; font-variant-numeric:tabular-nums}
+.saveTag{font-size:9.5px; color:var(--texto3); text-align:center; padding:10px 0 4px; letter-spacing:.4px}
+</style>
+
+<div id="app">
+  <header id="hud">
+    <div class="hudTop">
+      <div class="clock">
+        <div class="hora mono" id="hHora">07:00</div>
+        <div class="data" id="hData">seg, 2 de março</div>
+      </div>
+      <div class="spd" id="spd"></div>
+    </div>
+    <div class="hudBot">
+      <div class="chip" id="cGrana"><div class="k">Conta</div><div class="v">R$ 0</div></div>
+      <div class="chip" id="cDivida"><div class="k">Dívida</div><div class="v">R$ 0</div></div>
+      <div class="chip" id="cFama"><div class="k">Google</div><div class="v">5,0★</div></div>
+      <div class="chip" id="cStress"><div class="k">Estresse</div><div class="v">0</div><div class="miniBar"><i style="width:0"></i></div></div>
+    </div>
+  </header>
+
+  <div id="views">
+    <section class="view on" id="v-casa">
+      <div id="houseWrap"><canvas id="house"></canvas></div>
+    </section>
+    <section class="view" id="v-mesa"><div class="pad" id="mesaBody"></div></section>
+    <section class="view" id="v-zap"><div class="pad" id="zapBody"></div></section>
+    <section class="view" id="v-grana"><div class="pad" id="granaBody"></div></section>
+    <section class="view" id="v-fama"><div class="pad" id="famaBody"></div></section>
+    <section class="view" id="v-voce"><div class="pad" id="voceBody"></div></section>
+  </div>
+
+  <div id="doing">
+    <div class="txt">
+      <div class="t1" id="doTxt">—</div>
+      <div class="t2" id="doSub">—</div>
+      <div class="prog"><i id="doBar" style="width:0"></i></div>
+    </div>
+    <button class="stop" id="doStop">parar</button>
+  </div>
+
+  <nav id="tabs"></nav>
+  <div id="toasts"></div>
+
+  <div id="sheet"><div id="sheetBox"></div></div>
+</div>
+
+<script>
+'use strict';
+/* ============================================================
+   VIDA DE DEV
+   ============================================================ */
+
+const CFG = {
+  msPorHora: 10000,
+  vels: [0, 0.25, 0.5, 1, 2, 4],
+  velLabels: ['⏸','¼','½','1x','2x','4x'],
+
+  diaContas: 5,
+  contas: [
+    {n:'Aluguel', v:5000}, {n:'Dia a dia', v:2000},
+    {n:'Lazer e supérfluos', v:1000}, {n:'Ferramentas de trabalho', v:1000},
+  ],
+  mercado: {custo:250, horas:1.5, repoe:100},
+
+  decai: {energia:-4, fome:-5, higiene:-3, animo:-1.5},
+  dormeEnergia: 12,
+  corpoParado: -0.7,
+
+  tipos: {
+    S: {nome:'Simples',  pMin:300,  pMax:1000, hMin:5,  hMax:14, peso:45},
+    M: {nome:'Médio',    pMin:1000, pMax:2000, hMin:14, hMax:28, peso:45},
+    C: {nome:'Complexo', pMin:2000, pMax:4000, hMin:28, hMax:55, peso:10},
+  },
+  classes: {
+    A: {teto:1.15, sup:0.5, sat:88},
+    B: {teto:1.00, sup:1.0, sat:70},
+    C: {teto:0.60, sup:3.0, sat:45},
+  },
+  mercados: {
+    bom:    {p:0.25, custoMin:25, custoMax:50,  volMin:.90, volMax:1.00, mixA:.40, mixB:.45},
+    normal: {p:0.50, custoMin:50, custoMax:90,  volMin:.60, volMax:.90,  mixA:.25, mixB:.50},
+    ruim:   {p:0.25, custoMin:90, custoMax:130, volMin:.30, volMax:.60,  mixA:.10, mixB:.45},
+  },
+  noShow: 0.15,
+  followMax: 3, followBonus: 0.12, followHoras: 0.25,
+
+  divida: [
+    {ate:10000, nome:'Cartão de crédito', juros:.05},
+    {ate:20000, nome:'Amigos e parentes', juros:.05},
+    {ate:Infinity, nome:'Agiota', juros:.10},
+  ],
+  curso: {custo:800, horas:6, ganho:10},
+};
+
+const fmt = n => 'R$ ' + Math.round(n).toLocaleString('pt-BR');
+const cl  = (v,a,b) => Math.max(a, Math.min(b, v));
+const rnd = (a,b) => a + Math.random()*(b-a);
+const ri  = (a,b) => Math.floor(rnd(a, b+1));
+const pick= a => a[Math.floor(Math.random()*a.length)];
+const D0  = new Date(2026, 2, 2, 7, 0, 0);
+
+const NOMES = ['Wellington','Cleide','Marcos Aurélio','Tatiane','Reginaldo','Sueli','Fabrício',
+  'Juliana','Anderson','Rosângela','Everton','Patrícia','Gilmar','Vanessa','Cláudio','Simone',
+  'Denilson','Márcia','Rodrigo','Elaine','Josimar','Kelly','Nilton','Bruna','Valdir','Aline'];
+const EMPRESAS = ['Auto Peças Bandeirante','Ótica Vista Nova','Clínica Bem Viver','Padaria Pão de Ouro',
+  'Transportes Lopes','Doces da Vó Ita','Academia Corpo & Ação','Pet Shop Focinho Feliz',
+  'Materiais Ferreira','Salão Vitrine','Borracharia do Zé','Escola Novo Saber','Marmitaria Sabor Caseiro',
+  'Distribuidora Central','Imobiliária Terra Firme','Serralheria Aço Forte'];
+const PEDIDOS = ['controle de estoque','sistema de ordem de serviço','painel de vendas',
+  'agenda de clientes','controle de comissão','sistema de orçamento','ficha de cliente',
+  'controle financeiro','painel do vendedor','gestão de entregas','controle de contratos'];
+
+/* ---------------- estado ---------------- */
+let S = null;
+
+function novoJogo(){
+  return {
+    v: 1,
+    t: 0,                      // horas de jogo desde o início
+    vel: 3,
+    dinheiro: 3000,
+    divida: 0,
+    b: {energia:78, fome:70, higiene:80, animo:72, corpo:55, estresse:18, casamento:74},
+    hab: {vendas:22, execucao:30, suporte:15},
+    despensa: 70,
+    sujeira: 20,
+    fazendo: null,             // {tipo,label,sub,fim,ini,dados}
+    agenda: true,
+    leadsDia: 2,
+    mercadoMes: 'normal',
+    mercadoMesRef: -1,
+    custoLead: 70,
+    leads: [],
+    projetos: [],
+    entregues: [],
+    chamados: [],
+    zap: [],
+    google: {soma:15, n:3},
+    ra: {abertas:[], historico:0},
+    extrato: [],
+    animoBaixoH: 0,
+    depre: false,
+    ultimoDia: -1,
+    ultimoMes: -1,
+    faturadoMes: 0,
+    gastoLeadsMes: 0,
+    seq: 1,
+    nome: 'Você',
+  };
+}
+
+/* ---------------- tempo ---------------- */
+const agora = () => new Date(D0.getTime() + S.t*3600e3);
+const hDia  = () => { const d = agora(); return d.getHours() + d.getMinutes()/60; };
+const fds   = () => { const w = agora().getDay(); return w===0 || w===6; };
+const DIAS  = ['dom','seg','ter','qua','qui','sex','sáb'];
+const MESES = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+function hhmm(h){ const H = Math.floor(h)%24, M = Math.floor((h%1)*60); return String(H).padStart(2,'0')+':'+String(M).padStart(2,'0'); }
+function dur(h){
+  if(h < 1) return Math.round(h*60)+' min';
+  const H = Math.floor(h), M = Math.round((h%1)*60);
+  return M ? H+'h'+String(M).padStart(2,'0') : H+'h';
+}
+
+/* ---------------- derivados ---------------- */
+const estrelas = () => S.google.n ? S.google.soma/S.google.n : 5;
+function repIndice(){
+  const e = estrelas();
+  let v = (e-3)/2;                             // -1 .. 1
+  v -= S.ra.historico*0.055 + S.ra.abertas.length*0.09;
+  return cl(v, -1, 1);
+}
+function eficiencia(){
+  let f = 1 + 0.43*S.hab.execucao/100;
+  if(S.b.energia < 30) f *= 0.6;
+  if(S.b.animo < 30) f *= 0.75;
+  if(S.b.fome < 20) f *= 0.8;
+  if(S.b.estresse > 85) f *= 0.85;
+  if(S.depre) f *= 0.4;
+  return f;
+}
+function nomeFaixa(d){
+  for(const f of CFG.divida) if(d <= f.ate) return f;
+  return CFG.divida[2];
+}
+function jurosMes(){
+  let d = S.divida, juros = 0, base = 0;
+  for(const f of CFG.divida){
+    const parte = Math.min(d, f.ate) - base;
+    if(parte <= 0) break;
+    let taxa = f.juros;
+    if(f.nome === 'Agiota'){
+      const excedente = S.divida - 20000;
+      taxa = cl(0.10 + Math.floor(excedente/5000)*0.02, 0.10, 0.30);
+    }
+    juros += parte*taxa;
+    base = f.ate;
+    if(S.divida <= f.ate) break;
+  }
+  return juros;
+}
+function taxaAgiota(){
+  return cl(0.10 + Math.floor(Math.max(0,S.divida-20000)/5000)*0.02, .10, .30);
+}
+
+/* ---------------- ações ---------------- */
+function ocupado(){ return !!S.fazendo; }
+function iniciar(tipo, label, sub, horas, dados){
+  if(ocupado()) return toast('Você já está no meio de outra coisa.','r');
+  S.fazendo = {tipo, label, sub, ini:S.t, fim:S.t+horas, dados: dados||{}};
+  if(S.vel === 0) setVel(3);
+  render();
+}
+function pararAcao(){
+  if(!S.fazendo) return;
+  const f = S.fazendo;
+  S.fazendo = null;
+  if(f.tipo === 'dormir') toast('Você levantou antes da hora.','x');
+  render();
+}
+function concluir(f){
+  const d = f.dados;
+  switch(f.tipo){
+    case 'dormir': break;
+    case 'comer':
+      S.b.fome = cl(S.b.fome + (d.bom?60:30), 0, 100);
+      if(d.bom){ S.despensa = cl(S.despensa-9,0,100); S.b.animo += 2; }
+      else { S.b.corpo = cl(S.b.corpo-2,0,100); S.dinheiro -= 45; ex('Delivery', -45); }
+      break;
+    case 'banho': S.b.higiene = cl(S.b.higiene+70,0,100); S.b.animo += 3; break;
+    case 'correr':
+      S.b.corpo = cl(S.b.corpo+9,0,100); S.b.higiene = cl(S.b.higiene-25,0,100);
+      S.b.estresse = cl(S.b.estresse-8,0,100); S.b.animo = cl(S.b.animo+5,0,100);
+      toast('Corrida feita. A cabeça limpa junto.','v'); break;
+    case 'mercado':
+      S.despensa = 100; S.dinheiro -= CFG.mercado.custo; ex('Mercado', -CFG.mercado.custo);
+      toast('Despensa cheia.','v'); break;
+    case 'limpar': S.sujeira = 0; S.b.animo = cl(S.b.animo+4,0,100); break;
+    case 'tv': S.b.animo = cl(S.b.animo+9,0,100); S.b.estresse = cl(S.b.estresse-4,0,100); break;
+    case 'tania':
+      S.b.casamento = cl(S.b.casamento+22,0,100); S.b.estresse = cl(S.b.estresse-10,0,100);
+      S.b.animo = cl(S.b.animo+6,0,100);
+      toast('Tempo com a Tania. Ela reparou.','v'); break;
+    case 'limpezaTania':
+      S.b.casamento = cl(S.b.casamento+18,0,100); S.b.energia = cl(S.b.energia-30,0,100);
+      toast('4 horas de limpeza. O corpo sentiu.','x'); break;
+    case 'curso':
+      S.hab.execucao = cl(S.hab.execucao+CFG.curso.ganho,0,100);
+      toast('Curso terminado. Execução +'+CFG.curso.ganho+'.','v'); break;
+    case 'reuniao': fimReuniao(d.id); break;
+    case 'follow': fimFollow(d.id); break;
+    case 'chamado': fimChamado(d.id); break;
+    case 'avaliacao': fimAvaliacao(d.id); break;
+    case 'responderRA': fimResponderRA(d.id); break;
+    case 'projeto': break;
+  }
+  S.fazendo = null;
+}
+
+/* ---------------- loop ---------------- */
+let ultimo = performance.now();
+function loop(now){
+  const real = Math.min(now - ultimo, 500);
+  ultimo = now;
+  const vel = CFG.vels[S.vel];
+  if(vel > 0){
+    let dt = (real/CFG.msPorHora)*vel;
+    // avança em fatias pra não pular evento de hora
+    while(dt > 0){
+      const passo = Math.min(dt, 0.25);
+      avancar(passo);
+      dt -= passo;
+    }
+  }
+  desenharCasa();
+  if(now - ultimoHud > 220){ ultimoHud = now; atualizarHud(); }
+  requestAnimationFrame(loop);
+}
+let ultimoHud = 0;
+
+function avancar(dt){
+  const antes = agora();
+  S.t += dt;
+  const dep = agora();
+
+  // --- barras
+  const b = S.b;
+  b.fome    = cl(b.fome + CFG.decai.fome*dt, 0, 100);
+  b.higiene = cl(b.higiene + CFG.decai.higiene*dt, 0, 100);
+
+  const dormindo = S.fazendo && S.fazendo.tipo === 'dormir';
+  if(dormindo){
+    b.energia = cl(b.energia + CFG.dormeEnergia*dt, 0, 100);
+    b.estresse = cl(b.estresse - 0.6*dt, 0, 100);
+  } else {
+    let de = CFG.decai.energia;
+    if(b.corpo < 40) de *= 1.25;
+    b.energia = cl(b.energia + de*dt, 0, 100);
+  }
+
+  let da = CFG.decai.animo;
+  if(S.sujeira > 60) da -= 0.7;
+  if(b.higiene < 25) da -= 0.5;
+  if(b.casamento < 30) da -= 0.8;
+  if(b.estresse > 80) da -= 0.9;
+  if(!dormindo && S.fazendo && S.fazendo.tipo === 'tv') da = 0;
+  b.animo = cl(b.animo + da*dt, 0, 100);
+
+  S.sujeira = cl(S.sujeira + 1.4*dt, 0, 100);
+
+  // estresse contínuo por dívida
+  b.estresse = cl(b.estresse + (S.divida/5000)*(dt/24), 0, 100);
+
+  // depressão
+  if(b.animo < 10) S.animoBaixoH += dt; else S.animoBaixoH = Math.max(0, S.animoBaixoH - dt*2);
+  if(!S.depre && S.animoBaixoH >= 48){
+    S.depre = true;
+    toast('<b>Você travou.</b> Semanas ignorando tudo cobraram o preço. Descanso é o único caminho, e ele é lento.','r', 9000);
+  }
+  if(S.depre){
+    if(descansando()) b.animo = cl(b.animo + 3*(dt/24), 0, 100);
+    if(b.animo > 35){ S.depre = false; toast('A cabeça voltou ao lugar. Vá devagar.','v'); }
+  }
+
+  // --- ação em curso
+  if(S.fazendo){
+    const f = S.fazendo;
+    if(f.tipo === 'projeto'){
+      const p = S.projetos.find(x => x.id === f.dados.id);
+      if(!p){ S.fazendo = null; }
+      else {
+        p.feitas += dt*eficiencia();
+        S.hab.execucao = cl(S.hab.execucao + 0.5*dt, 0, 100);
+        if(p.feitas >= p.horas){ p.feitas = p.horas; S.fazendo = null; toast('<b>'+p.cliente+'</b> — o sistema está pronto. Falta entregar.','v'); }
+        else if(S.t >= f.fim) S.fazendo = null;
+      }
+    } else if(f.tipo === 'chamado'){
+      const c = S.chamados.find(x => x.id === f.dados.id);
+      if(!c) S.fazendo = null;
+      else { c.feitas += dt*(1 + 0.5*S.hab.suporte/100); if(c.feitas >= c.horas) concluir(f); }
+    } else if(S.t >= f.fim){
+      concluir(f);
+    }
+  }
+
+  // --- viradas
+  if(dep.getHours() !== antes.getHours()) porHora(dep);
+  if(dep.getDate() !== antes.getDate()) porDia(dep);
+}
+
+function descansando(){
+  return !S.fazendo || ['dormir','tv','tania','correr','comer','banho'].includes(S.fazendo.tipo);
+}
+
+/* ---------------- por hora ---------------- */
+function porHora(d){
+  const h = d.getHours();
+  // leads pingam entre 9 e 18, dia útil
+  if(S.agenda && !fds() && h >= 9 && h <= 18) tentarLead();
+  // reunião marcada perdeu a hora?
+  S.leads.forEach(l => {
+    if(l.st === 'marcada' && S.t > l.hReuniao + 1 && !l.atrasada){
+      l.atrasada = true;
+      toast('Passou da hora da reunião com <b>'+l.nome+'</b>. Ainda dá pra correr atrás hoje.','x');
+    }
+  });
+  if(h === 8 && !fds()) chegarChamado();
+  if(h === 15) chegarChamado();
+  render(true);
+}
+
+function tentarLead(){
+  const m = CFG.mercados[S.mercadoMes];
+  const porHoraAlvo = S.leadsDia/9;
+  const vol = rnd(m.volMin, m.volMax);
+  if(Math.random() > porHoraAlvo*vol) return;
+  if(S.leads.filter(l => l.st !== 'perdido').length >= 12) return;
+  criarLead();
+}
+
+function criarLead(){
+  const m = CFG.mercados[S.mercadoMes];
+  const r = Math.random();
+  const classe = r < m.mixA ? 'A' : (r < m.mixA+m.mixB ? 'B' : 'C');
+  const tr = Math.random()*100;
+  const tipo = tr < 45 ? 'S' : (tr < 90 ? 'M' : 'C');
+  const T = CFG.tipos[tipo];
+  const base = rnd(T.pMin, T.pMax);
+  const custo = rnd(m.custoMin, m.custoMax);
+
+  S.dinheiro -= custo; S.gastoLeadsMes += custo; ex('Lead', -custo);
+
+  const rep = repIndice();
+  const teto = base * CFG.classes[classe].teto * (1 + rep*0.16);
+
+  // reunião amanhã (ou segunda) entre 9h e 17h
+  let hR = S.t + (24 - hDia()) + rnd(9, 17);
+  for(let i=0;i<3;i++){
+    const dd = new Date(D0.getTime() + hR*3600e3);
+    if(dd.getDay()===0 || dd.getDay()===6) hR += 24; else break;
+  }
+
+  const l = {
+    id: S.seq++, nome: pick(NOMES), empresa: pick(EMPRESAS), pedido: pick(PEDIDOS),
+    classe, tipo, base, teto, custo, st:'marcada', hReuniao:hR, follows:0, atrasada:false,
+    orcamento:0, noShow: Math.random() < CFG.noShow,
+  };
+  S.leads.push(l);
+  toast('Lead novo: <b>'+l.empresa+'</b>. Reunião '+diaRel(hR)+' às '+hhmm(hR%24)+'.', 'o');
+}
+
+function diaRel(h){
+  const d1 = agora().getDate(), d2 = new Date(D0.getTime()+h*3600e3);
+  if(d2.getDate() === d1) return 'hoje';
+  const amanha = new Date(agora().getTime()+864e5);
+  if(d2.getDate() === amanha.getDate()) return 'amanhã';
+  return DIAS[d2.getDay()];
+}
+
+function chegarChamado(){
+  const n = S.entregues.length;
+  if(!n) return;
+  let chance = 0;
+  S.entregues.forEach(c => chance += 0.045*CFG.classes[c.classe].sup);
+  if(Math.random() > Math.min(chance, .55)) return;
+  const cli = pick(S.entregues);
+  const grande = Math.random() < 0.18;
+  const c = {
+    id: S.seq++, cliente: cli.cliente, classe: cli.classe, refId: cli.id,
+    horas: grande ? rnd(4,8) : rnd(0.5,2), feitas:0, aberto:S.t, grande,
+    desc: grande ? 'Deu problemão. Parou tudo do lado dele.' : pick(['Erro ao salvar um cadastro.','O relatório saiu com número errado.','Não consegue logar.','Pediu um campo novo na tela.','A tela trava no celular.']),
+  };
+  S.chamados.push(c);
+  toast((grande?'<b>PROBLEMÃO</b> no ':'Chamado de ')+'<b>'+c.cliente+'</b>: '+c.desc, grande?'r':'x');
+}
+
+/* ---------------- por dia ---------------- */
+function porDia(d){
+  const dia = d.getDate(), mes = d.getMonth();
+
+  // corpo
+  S.b.corpo = cl(S.b.corpo + CFG.corpoParado, 0, 100);
+  // casamento
+  S.b.casamento = cl(S.b.casamento - 3, 0, 100);
+
+  // habilidades caem com desuso
+  if(!S.usouVendasHoje) S.hab.vendas = cl(S.hab.vendas - 0.8, 0, 100);
+  if(!S.usouExecHoje)   S.hab.execucao = cl(S.hab.execucao - 0.3, 0, 100);
+  S.hab.suporte = cl(S.hab.suporte - 0.5, 0, 100);
+  S.usouVendasHoje = false; S.usouExecHoje = false;
+
+  // estresse por pendência
+  let st = 0;
+  S.projetos.forEach(p => { if(S.t > p.prazo){ st += 2; p.atraso = true; } });
+  S.chamados.forEach(c => { c.dias = (c.dias||0)+1; if(c.dias >= 1) st += 3; });
+  st += S.ra.abertas.length*5;
+  S.b.estresse = cl(S.b.estresse + st, 0, 100);
+
+  // clientes irritados reclamam
+  S.projetos.forEach(p => { if(p.atraso && Math.random() < .22) reclamar(p.cliente, 'atrasou a entrega'); });
+  S.chamados.forEach(c => { if(c.dias >= 3 && !c.reclamou && Math.random() < .4){ c.reclamou = true; reclamar(c.cliente, 'ficou dias sem resposta no suporte'); } });
+
+  // leads velhos morrem
+  S.leads = S.leads.filter(l => {
+    if(l.st === 'perdido') return false;
+    if((l.st === 'marcada' || l.st === 'atrasada') && S.t > l.hReuniao + 20){
+      toast('<b>'+l.empresa+'</b> desistiu. Você não fez a reunião.','r');
+      return false;
+    }
+    if(l.st === 'pensando' && S.t > l.hOrc + 96){
+      toast('<b>'+l.empresa+'</b> sumiu de vez.','r');
+      return false;
+    }
+    return true;
+  });
+
+  // mês novo: sorteia mercado
+  if(mes !== S.ultimoMes){
+    S.ultimoMes = mes;
+    const r = Math.random();
+    S.mercadoMes = r < .25 ? 'bom' : (r < .75 ? 'normal' : 'ruim');
+    const m = CFG.mercados[S.mercadoMes];
+    S.custoLead = Math.round(rnd(m.custoMin, m.custoMax));
+    S.faturadoMes = 0; S.gastoLeadsMes = 0;
+    const txt = {bom:'Mês bom. Lead barato e gente séria aparecendo.',
+      normal:'Mês normal. Nada de mais.',
+      ruim:'<b>Mês ruim.</b> Lead caro, pouco e de má qualidade. Segura a onda.'};
+    toast(txt[S.mercadoMes], S.mercadoMes==='ruim'?'r':'o', 7000);
+  }
+
+  // dia 5: contas
+  if(dia === CFG.diaContas) cobrarContas();
+  // dia 1: juros
+  if(dia === 1 && S.divida > 0){
+    const j = jurosMes();
+    S.divida += j; ex('Juros da dívida', -j, true);
+    toast('Juros da dívida: <b>'+fmt(j)+'</b>. Total agora '+fmt(S.divida)+'.','r');
+    if(S.divida > 20000 && Math.random() < .5) cobrancaAgiota();
+  }
+
+  // evento
+  if(Math.random() < 0.24) sortearEvento();
+
+  render(true);
+  salvar();
+}
+
+function cobrarContas(){
+  const total = CFG.contas.reduce((a,c) => a+c.v, 0);
+  if(S.dinheiro >= total){
+    S.dinheiro -= total; ex('Contas do mês', -total);
+    toast('Contas do mês pagas: '+fmt(total)+'.','v');
+  } else {
+    const falta = total - Math.max(0, S.dinheiro);
+    const pago = Math.max(0, S.dinheiro);
+    S.dinheiro -= pago;
+    S.divida += falta;
+    ex('Contas do mês (parcial)', -pago);
+    ex('Foi pra dívida', -falta, true);
+    S.b.estresse = cl(S.b.estresse+12,0,100);
+    toast('<b>Faltou '+fmt(falta)+'</b> pras contas. Foi pra dívida — '+nomeFaixa(S.divida).nome+'.','r', 8000);
+  }
+}
+
+function cobrancaAgiota(){
+  S.b.estresse = cl(S.b.estresse+20,0,100);
+  S.b.animo = cl(S.b.animo-12,0,100);
+  toast('<b>O cara da grana ligou.</b> Não foi uma conversa boa.','r', 8000);
+}
+
+function reclamar(cliente, motivo){
+  if(S.ra.abertas.some(r => r.cliente === cliente)) return;
+  S.ra.abertas.push({id:S.seq++, cliente, motivo, quando:S.t});
+  S.b.estresse = cl(S.b.estresse+5,0,100);
+  toast('<b>Reclame Aqui:</b> '+cliente+' reclamou que você '+motivo+'.','r', 7000);
+}
+
+/* ---------------- eventos ---------------- */
+const EVENTOS = [
+  {id:'carro', t:'O carro pifou', d:'Barulho estranho, luz no painel. Vai ter que levar na oficina.',
+   f:()=>{ const c = Math.round(rnd(400,2000)); S.dinheiro -= c; ex('Oficina', -c);
+     S.b.estresse=cl(S.b.estresse+8,0,100); return 'Oficina: '+fmt(c)+' e meio dia perdido.'; }, horas:4},
+  {id:'tania_balada', t:'A Tania precisa de carona', d:'Vai sair com as amigas. Alguém tem que buscar depois.',
+   escolha:true, sim:'Ir buscar (1h30, madrugada)', nao:'Deixar ela se virar',
+   fSim:()=>{ S.b.casamento=cl(S.b.casamento+10,0,100); S.b.energia=cl(S.b.energia-14,0,100); return 'Você buscou. Dormiu tarde.'; },
+   fNao:()=>{ S.b.casamento=cl(S.b.casamento-14,0,100); return 'Ficou um clima.'; }},
+  {id:'limpeza', t:'Ajudar a Tania na limpeza', d:'Serviço de 4 horas. Ela conta com você.',
+   escolha:true, sim:'Ir junto (4h)', nao:'Não dá, tenho projeto',
+   fSim:()=>{ S.b.casamento=cl(S.b.casamento+18,0,100); S.b.energia=cl(S.b.energia-30,0,100); return 'Quatro horas de faxina. Voltou moído.'; },
+   fNao:()=>{ S.b.casamento=cl(S.b.casamento-12,0,100); S.b.estresse=cl(S.b.estresse+5,0,100); return 'Ela foi sozinha.'; }},
+  {id:'net', t:'A internet caiu', d:'Sem net, sem trabalho. Suporte da operadora é aquilo.',
+   f:()=>{ return 'Voltou depois de umas horas. Nada feito nesse tempo.'; }, horas:3},
+  {id:'gripe', t:'Você acordou gripado', d:'Dois dias arrastados.',
+   f:()=>{ S.b.energia=cl(S.b.energia-35,0,100); S.b.animo=cl(S.b.animo-8,0,100); return 'Corpo mole, cabeça pesada.'; }},
+  {id:'sumiu', t:'Cliente sumiu no meio do projeto', d:'Você mandou dúvida e ele não responde há dias. O prazo corre igual.',
+   f:()=>{ const p = S.projetos[0]; if(p){ p.prazo -= 12; return p.cliente+' não responde, e o prazo encurtou.'; } return 'Falso alarme.'; }},
+  {id:'desconto', t:'Lead pedindo desconto agressivo', d:'Quer metade do preço e diz que tem outro orçamento.',
+   f:()=>{ const l = S.leads.find(x=>x.st==='pensando'); if(l){ l.teto *= 0.75; return l.empresa+' endureceu. Só fecha por bem menos.'; } return 'Não era ninguém importante.'; }},
+  {id:'aniversario', t:'Aniversário na família', d:'Todo mundo vai. Você também deveria.',
+   escolha:true, sim:'Ir (3h)', nao:'Ficar trabalhando',
+   fSim:()=>{ S.b.casamento=cl(S.b.casamento+12,0,100); S.b.animo=cl(S.b.animo+10,0,100); S.b.estresse=cl(S.b.estresse-8,0,100); return 'Foi bom sair de casa.'; },
+   fNao:()=>{ S.b.casamento=cl(S.b.casamento-10,0,100); S.b.animo=cl(S.b.animo-5,0,100); return 'Você ficou. Todo mundo notou.'; }},
+  {id:'indicacao', t:'Indicação chegou sozinha', d:'Um cliente antigo passou seu contato.',
+   f:()=>{ criarLead(); return 'Lead de graça na agenda.'; }},
+  {id:'pc', t:'O PC começou a travar', d:'Vai ter que formatar ou pagar alguém.',
+   f:()=>{ const c=Math.round(rnd(150,700)); S.dinheiro-=c; ex('Conserto do PC', -c); return 'Custou '+fmt(c)+' e uma manhã.'; }, horas:3},
+];
+
+function sortearEvento(){
+  const e = pick(EVENTOS);
+  if(e.escolha){
+    sheet(`<h2>${e.t}</h2><div class="sub">${e.d}</div>`, [
+      {ic:'✅', n:e.sim, click:()=>{ const r = e.fSim(); fecharSheet(); toast(r,'v'); render(); }},
+      {ic:'🚫', n:e.nao, click:()=>{ const r = e.fNao(); fecharSheet(); toast(r,'x'); render(); }},
+    ]);
+    setVel(0);
+  } else {
+    const r = e.f();
+    if(e.horas) S.t += e.horas;
+    toast('<b>'+e.t+'.</b> '+r, 'x', 7000);
+  }
+}
+
+/* ---------------- funil ---------------- */
+function fazerReuniao(id){
+  const l = S.leads.find(x => x.id === id);
+  if(!l) return;
+  iniciar('reuniao', 'Reunião com '+l.empresa, l.nome, 1, {id});
+}
+function fimReuniao(id){
+  const l = S.leads.find(x => x.id === id);
+  if(!l) return;
+  S.usouVendasHoje = true;
+  S.hab.vendas = cl(S.hab.vendas + 1.5 + (S.seqReuniao||0)*0.4, 0, 100);
+  S.seqReuniao = (S.seqReuniao||0)+1;
+
+  if(l.noShow){
+    l.st = 'perdido';
+    toast('<b>'+l.nome+' não apareceu.</b> O lead você já pagou.','r');
+    return;
+  }
+  let ch = 0.55 + (S.hab.vendas-40)/220 + repIndice()*0.12;
+  if(S.b.higiene < 25) ch -= 0.18;
+  if(S.b.animo < 30) ch -= 0.15;
+  if(S.depre) ch -= 0.4;
+  if(!l.atrasada) ch += 0.10;
+  ch = cl(ch, .05, .95);
+
+  if(Math.random() < ch){
+    l.st = 'orcar';
+    toast('<b>'+l.empresa+'</b> gostou. Quer o orçamento.','v');
+  } else if(Math.random() < .5){
+    l.st = 'perdido';
+    toast(l.empresa+' disse que não é o momento.','r');
+  } else {
+    l.st = 'orcar';
+    l.frio = true;
+    toast(l.empresa+' ficou morno, mas pediu o orçamento.','x');
+  }
+}
+
+function abrirOrcamento(id){
+  const l = S.leads.find(x => x.id === id);
+  if(!l) return;
+  const T = CFG.tipos[l.tipo];
+  const ref = Math.round(l.base/50)*50;
+  sheet(
+    `<h2>Orçamento — ${l.empresa}</h2>
+     <div class="sub">${l.pedido}, porte <b>${T.nome}</b>. Você não sabe o quanto ele aceita pagar.
+     Projeto parecido costuma dar de ${fmt(T.pMin)} a ${fmt(T.pMax)}.</div>
+     <label class="f">Seu preço</label>
+     <input type="number" id="orcVal" value="${ref}" step="50" min="100">
+     <div class="meta" style="margin-top:8px">Metade na assinatura, metade na entrega.</div>`,
+    [{ic:'📤', n:'Enviar orçamento', d:'Depois disso é com ele', click:()=>{
+        const v = Math.max(100, +document.getElementById('orcVal').value || ref);
+        fecharSheet(); enviarOrcamento(l, v);
+      }},
+     {ic:'↩︎', n:'Agora não', click:fecharSheet}]
+  );
+}
+
+function chanceFechar(l){
+  const r = l.orcamento / l.teto;
+  let base = 1/(1 + Math.exp(7.32*(r-1)));
+  base *= (0.75 + 0.5*S.hab.vendas/100);
+  base += l.follows*CFG.followBonus;
+  if(l.frio) base -= 0.15;
+  base += repIndice()*0.08;
+  return cl(base, .02, .96);
+}
+
+function enviarOrcamento(l, v){
+  l.orcamento = v; l.hOrc = S.t;
+  const ch = chanceFechar(l);
+  if(Math.random() < ch) fechar(l);
+  else { l.st = 'pensando'; toast('<b>'+l.nome+'</b> ficou de pensar. Vai ter que ir atrás.','x'); }
+  render();
+}
+
+function fazerFollow(id){
+  const l = S.leads.find(x => x.id === id);
+  if(!l || l.follows >= CFG.followMax) return;
+  iniciar('follow', 'Follow-up com '+l.nome, 'cutucando no zap', CFG.followHoras, {id});
+}
+function fimFollow(id){
+  const l = S.leads.find(x => x.id === id);
+  if(!l) return;
+  l.follows++;
+  S.b.estresse = cl(S.b.estresse+1,0,100);
+  S.usouVendasHoje = true;
+  const ch = chanceFechar(l) * (l.follows > CFG.followMax ? .4 : 1);
+  zap(l.nome, l.follows === 1 ? 'Oi! Conseguiu ver a proposta?' : 'E aí, decidiu?', true);
+  if(Math.random() < ch){ fechar(l); }
+  else {
+    if(l.follows >= CFG.followMax){
+      zap(l.nome, 'Vou deixar pra frente, valeu.');
+      l.st = 'perdido';
+      toast(l.empresa+' passou. Três tentativas e nada.','r');
+    } else {
+      zap(l.nome, pick(['Tô vendo aqui ainda...','Semana que vem eu te falo','Deixa eu conversar com meu sócio']));
+      toast(l.nome+' enrolou de novo.','x');
+    }
+  }
+  render();
+}
+
+function fechar(l){
+  const T = CFG.tipos[l.tipo];
+  const horas = rnd(T.hMin, T.hMax) * (l.orcamento/l.base) * 0.85 + rnd(T.hMin, T.hMax)*0.15;
+  const entrada = l.orcamento/2;
+  S.dinheiro += entrada; S.faturadoMes += entrada;
+  ex('Entrada — '+l.empresa, entrada);
+  const p = {
+    id: S.seq++, cliente: l.empresa, contato: l.nome, classe: l.classe, tipo: l.tipo,
+    preco: l.orcamento, horas: Math.max(3, horas), feitas: 0,
+    prazo: S.t + Math.max(72, horas*5.5), inicio: S.t,
+    satisfacao: CFG.classes[l.classe].sat, pedido: l.pedido, atraso:false,
+  };
+  S.projetos.push(p);
+  l.st = 'perdido';
+  zap(l.nome, 'Fechado! Pode começar.');
+  toast('<b>Fechou com '+l.empresa+'</b> por '+fmt(l.orcamento)+'. Entrada de '+fmt(entrada)+' na conta.','v', 7000);
+}
+
+function trabalhar(id, horas){
+  const p = S.projetos.find(x => x.id === id);
+  if(!p) return;
+  S.usouExecHoje = true;
+  iniciar('projeto', 'Codando: '+p.cliente, p.pedido, horas, {id});
+}
+
+function entregar(id){
+  const p = S.projetos.find(x => x.id === id);
+  if(!p || p.feitas < p.horas) return;
+  const resto = p.preco/2;
+  S.dinheiro += resto; S.faturadoMes += resto;
+  ex('Entrega — '+p.cliente, resto);
+  let sat = p.satisfacao;
+  if(p.atraso) sat -= 30;
+  if(S.hab.execucao > 60) sat += 6;
+  sat = cl(sat, 0, 100);
+  S.entregues.push({id:p.id, cliente:p.cliente, contato:p.contato, classe:p.classe, satisfacao:sat, quando:S.t, avaliado:false});
+  S.projetos = S.projetos.filter(x => x.id !== id);
+  S.b.animo = cl(S.b.animo+8,0,100);
+  toast('<b>Entregue.</b> '+fmt(resto)+' na conta. Satisfação do cliente: '+Math.round(sat)+'.','v', 7000);
+  if(sat < 30) reclamar(p.cliente, 'entregou um sistema ruim');
+  render();
+}
+
+function atenderChamado(id){
+  const c = S.chamados.find(x => x.id === id);
+  if(!c) return;
+  iniciar('chamado', 'Suporte: '+c.cliente, c.desc, c.horas - c.feitas, {id});
+}
+function fimChamado(id){
+  const c = S.chamados.find(x => x.id === id);
+  if(!c) return;
+  S.hab.suporte = cl(S.hab.suporte+2,0,100);
+  const e = S.entregues.find(x => x.id === c.refId);
+  if(e) e.satisfacao = cl(e.satisfacao + (c.dias >= 2 ? 2 : 8), 0, 100);
+  S.chamados = S.chamados.filter(x => x.id !== id);
+  toast('Chamado de '+c.cliente+' resolvido.','v');
+}
+
+function pedirAvaliacao(id){
+  const e = S.entregues.find(x => x.id === id);
+  if(!e) return;
+  iniciar('avaliacao', 'Pedindo avaliação', e.cliente, .25, {id});
+}
+function fimAvaliacao(id){
+  const e = S.entregues.find(x => x.id === id);
+  if(!e) return;
+  e.avaliado = true;
+  let n;
+  if(e.satisfacao >= 80) n = 5;
+  else if(e.satisfacao >= 60) n = 4;
+  else if(e.satisfacao >= 40) n = 3;
+  else n = ri(1,2);
+  S.google.soma += n; S.google.n++;
+  const antes = estrelas();
+  if(n === 5) toast('<b>'+e.cliente+'</b> deu 5 estrelas. Média em '+antes.toFixed(1).replace('.',',')+'.','v');
+  else toast('<b>'+e.cliente+'</b> deu '+n+' estrela'+(n>1?'s':'')+'. A média não volta mais ao que era.','r', 7000);
+}
+
+function responderRA(id){
+  const r = S.ra.abertas.find(x => x.id === id);
+  if(!r) return;
+  iniciar('responderRA', 'Respondendo o Reclame Aqui', r.cliente, .5, {id});
+}
+function fimResponderRA(id){
+  const r = S.ra.abertas.find(x => x.id === id);
+  if(!r) return;
+  S.ra.abertas = S.ra.abertas.filter(x => x.id !== id);
+  S.ra.historico++;
+  S.b.estresse = cl(S.b.estresse+5,0,100);
+  toast('Respondido. Sai da tela, mas fica no histórico — e o histórico pesa no preço que o cliente aceita.','x', 7000);
+}
+
+function zap(de, txt, meu){
+  S.zap.unshift({id:S.seq++, de, txt, meu:!!meu, t:S.t});
+  if(S.zap.length > 40) S.zap.pop();
+}
+function ex(desc, v, divida){
+  S.extrato.unshift({desc, v, t:S.t, divida:!!divida});
+  if(S.extrato.length > 60) S.extrato.pop();
+}
+
+/* ============================================================
+   DESENHO DA CASA
+   ============================================================ */
+const cv = document.getElementById('house');
+const cx = cv.getContext('2d');
+const W = 400, H = 660;
+let escala = 1;
+
+function ajustarCanvas(){
+  const w = cv.parentElement.clientWidth || 400;
+  escala = w/W;
+  const dpr = Math.min(window.devicePixelRatio||1, 2.5);
+  cv.width = W*escala*dpr; cv.height = H*escala*dpr;
+  cv.style.height = (H*escala)+'px';
+  cx.setTransform(escala*dpr, 0, 0, escala*dpr, 0, 0);
+}
+
+const COMODOS = [
+  {n:'COZINHA', y0:8,   y1:222, piso:212},
+  {n:'SALA / QUARTO', y0:222, y1:452, piso:442},
+  {n:'BANHEIRO', y0:452, y1:652, piso:642},
+];
+const MOVEIS = [
+  {id:'geladeira', c:0, x:26,  y:104, w:52,  h:108, lab:'Geladeira'},
+  {id:'fogao',     c:0, x:94,  y:150, w:62,  h:62,  lab:'Fogão'},
+  {id:'piaCoz',    c:0, x:170, y:154, w:64,  h:58,  lab:'Pia'},
+  {id:'mesaCoz',   c:0, x:252, y:158, w:110, h:54,  lab:'Mesa'},
+  {id:'cama',      c:1, x:24,  y:352, w:136, h:90,  lab:'Cama'},
+  {id:'mesaTrab',  c:1, x:176, y:340, w:112, h:102, lab:'Mesa de trabalho'},
+  {id:'sofa',      c:1, x:300, y:380, w:76,  h:62,  lab:'Sofá e TV'},
+  {id:'box',       c:2, x:26,  y:498, w:112, h:144, lab:'Chuveiro'},
+  {id:'piaBan',    c:2, x:156, y:562, w:72,  h:80,  lab:'Pia'},
+  {id:'vaso',      c:2, x:250, y:566, w:56,  h:76,  lab:'Vaso'},
+  {id:'porta',     c:2, x:330, y:534, w:52,  h:108, lab:'Sair de casa'},
+];
+
+function corCeu(){
+  const h = hDia();
+  const paleta = [
+    [0,  '#101A33'], [5,  '#243356'], [6.5,'#7B6A8C'], [8,  '#9CC6E8'],
+    [12, '#B8DCF2'], [17, '#C8CBE0'], [18.5,'#E09A6A'], [20, '#3E4A78'], [22, '#141E38'], [24, '#101A33'],
+  ];
+  for(let i=0;i<paleta.length-1;i++){
+    const [h1,c1] = paleta[i], [h2,c2] = paleta[i+1];
+    if(h >= h1 && h <= h2){
+      const t = (h-h1)/(h2-h1);
+      return mix(c1, c2, t);
+    }
+  }
+  return '#101A33';
+}
+function mix(a,b,t){
+  const p = c => [parseInt(c.slice(1,3),16), parseInt(c.slice(3,5),16), parseInt(c.slice(5,7),16)];
+  const A = p(a), B = p(b);
+  return 'rgb('+A.map((v,i)=>Math.round(v+(B[i]-v)*t)).join(',')+')';
+}
+function luzInterna(){
+  const h = hDia();
+  return (h < 6.5 || h > 18.5) ? 1 : (h < 8 || h > 17 ? .4 : 0);
+}
+
+function rr(x,y,w,h,r){
+  cx.beginPath();
+  const rad = Math.min(r, w/2, h/2);
+  cx.moveTo(x+rad,y);
+  cx.arcTo(x+w,y,x+w,y+h,rad); cx.arcTo(x+w,y+h,x,y+h,rad);
+  cx.arcTo(x,y+h,x,y,rad); cx.arcTo(x,y,x+w,y,rad);
+  cx.closePath();
+}
+function fill(c,x,y,w,h,r){ cx.fillStyle=c; if(r){rr(x,y,w,h,r); cx.fill();} else cx.fillRect(x,y,w,h); }
+
+let bounce = 0;
+function desenharCasa(){
+  if(document.getElementById('v-casa').classList.contains('on') === false) return;
+  bounce += 0.06;
+  const ceu = corCeu(), luz = luzInterna();
+
+  cx.clearRect(0,0,W,H);
+  fill(ceu, 0,0,W,H);
+
+  // estrelas de madrugada
+  const h = hDia();
+  if(h < 5.5 || h > 20){
+    cx.fillStyle = 'rgba(255,255,255,.55)';
+    for(let i=0;i<26;i++){
+      const sx = (i*97)%W, sy = (i*53)%H;
+      cx.fillRect(sx, sy, 1.6, 1.6);
+    }
+  }
+
+  COMODOS.forEach((c, i) => {
+    const hh = c.y1 - c.y0;
+    // parede
+    fill('#F2E2C9', 14, c.y0, W-28, hh, 4);
+    // sombra suave no topo
+    const g = cx.createLinearGradient(0, c.y0, 0, c.y0+50);
+    g.addColorStop(0, 'rgba(0,0,0,.10)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+    cx.fillStyle = g; cx.fillRect(14, c.y0, W-28, 50);
+    // piso
+    fill(i===2 ? '#CFE3E6' : '#C4854F', 14, c.piso, W-28, c.y1-c.piso, 0);
+    fill('rgba(0,0,0,.13)', 14, c.piso, W-28, 3);
+    // rodapé
+    fill('#E2CDAE', 14, c.piso-6, W-28, 6);
+
+    // luz de teto acesa
+    if(luz > 0){
+      const lg = cx.createRadialGradient(W/2, c.y0+10, 5, W/2, c.y0+10, 170);
+      lg.addColorStop(0, 'rgba(255,214,140,'+(0.30*luz)+')');
+      lg.addColorStop(1, 'rgba(255,214,140,0)');
+      cx.fillStyle = lg; cx.fillRect(14, c.y0, W-28, hh);
+      fill('#FFD98A', W/2-11, c.y0+2, 22, 7, 3);
+    }
+    // etiqueta
+    cx.fillStyle = 'rgba(70,48,28,.42)';
+    cx.font = '700 9px Figtree, sans-serif';
+    cx.fillText(c.n, 22, c.y0+16);
+  });
+
+  janela(250, 40, 96, 66, ceu);
+  janela(30, 250, 84, 62, ceu);
+
+  // ---- móveis
+  fogao(); geladeira(); piaCozinha(); mesaCozinha();
+  cama(); mesaTrabalho(); sofaTV();
+  boxBanho(); piaBanheiro(); vasoSan(); portaSaida();
+
+  if(S.sujeira > 35) desenharSujeira();
+  desenharBoneco();
+
+  // brilho do móvel tocado
+  if(tocado && tocado.until > performance.now()){
+    const m = MOVEIS.find(x=>x.id===tocado.id);
+    if(m){ cx.strokeStyle = 'rgba(242,160,61,.9)'; cx.lineWidth = 2.5; rr(m.x-4,m.y-4,m.w+8,m.h+8,10); cx.stroke(); }
+  }
+}
+
+function janela(x,y,w,h,ceu){
+  fill('#8C5A33', x-4, y-4, w+8, h+8, 4);
+  fill(ceu, x, y, w, h, 2);
+  const sol = hDia()>7 && hDia()<18;
+  if(sol){ fill('rgba(255,240,200,.28)', x, y, w, h/2, 2); }
+  else { cx.fillStyle='rgba(255,255,255,.5)'; cx.fillRect(x+w-24, y+8, 3,3); cx.fillRect(x+12,y+18,2,2); }
+  fill('#8C5A33', x+w/2-2, y, 4, h);
+  fill('#8C5A33', x, y+h/2-2, w, 4);
+}
+
+function geladeira(){
+  const m = MOVEIS[0];
+  fill('rgba(0,0,0,.10)', m.x+4, m.y+m.h-4, m.w, 6, 3);
+  fill('#DCE3E8', m.x, m.y, m.w, m.h, 5);
+  fill('#C8D2DA', m.x, m.y+40, m.w, 3);
+  fill('#98A5B0', m.x+m.w-9, m.y+14, 4, 20, 2);
+  fill('#98A5B0', m.x+m.w-9, m.y+52, 4, 26, 2);
+  fill(S.despensa>50?'#4CAF7D':(S.despensa>20?'#F2A03D':'#E0503A'), m.x+7, m.y+8, 12, 4, 2);
+}
+function fogao(){
+  const m = MOVEIS[1];
+  fill('rgba(0,0,0,.10)', m.x+4, m.y+m.h-4, m.w, 6, 3);
+  fill('#4A5260', m.x, m.y, m.w, m.h, 5);
+  fill('#333A45', m.x+5, m.y+5, m.w-10, 20, 3);
+  [0,1].forEach(i=>[0,1].forEach(j=>{ fill('#1E232B', m.x+13+j*22, m.y+9+i*8, 12, 5, 3); }));
+  fill('#8892A0', m.x+6, m.y+32, m.w-12, 24, 3);
+  fill('#F2A03D', m.x+m.w/2-8, m.y+40, 16, 8, 2);
+}
+function piaCozinha(){
+  const m = MOVEIS[2];
+  fill('#B4763F', m.x, m.y+16, m.w, m.h-16, 4);
+  fill('#D8DEE3', m.x, m.y+10, m.w, 12, 3);
+  fill('#AFB8C0', m.x+12, m.y+13, 34, 7, 2);
+  fill('#8892A0', m.x+m.w-18, m.y-2, 4, 14, 2);
+  fill('#8892A0', m.x+m.w-18, m.y-2, 14, 4, 2);
+}
+function mesaCozinha(){
+  const m = MOVEIS[3];
+  fill('#B0764A', m.x+8, m.y+10, m.w-16, 8, 3);
+  fill('#8C5A33', m.x+16, m.y+18, 6, m.h-20);
+  fill('#8C5A33', m.x+m.w-22, m.y+18, 6, m.h-20);
+  fill('#7E8CA0', m.x-4, m.y+16, 8, 30, 3);
+  fill('#7E8CA0', m.x+m.w-4, m.y+16, 8, 30, 3);
+  fill('#E07A9B', m.x+m.w/2-9, m.y+2, 18, 9, 4);
+}
+function cama(){
+  const m = MOVEIS[4];
+  fill('rgba(0,0,0,.10)', m.x+4, m.y+m.h-4, m.w, 6, 3);
+  fill('#8C5A33', m.x, m.y+18, m.w, m.h-18, 5);
+  fill('#4C8FD6', m.x+4, m.y+26, m.w-8, m.h-34, 4);
+  fill('#EFF3F8', m.x+8, m.y+20, 40, 20, 5);
+  fill('#3B72AD', m.x+50, m.y+40, m.w-56, m.h-50, 4);
+  fill('#6B4526', m.x, m.y, 8, m.h, 3);
+}
+function mesaTrabalho(){
+  const m = MOVEIS[5];
+  fill('rgba(0,0,0,.10)', m.x+4, m.y+m.h-4, m.w, 6, 3);
+  // monitor
+  fill('#2A3040', m.x+18, m.y, 76, 48, 4);
+  const lig = S.fazendo && (S.fazendo.tipo==='projeto'||S.fazendo.tipo==='follow'||S.fazendo.tipo==='reuniao');
+  fill(lig ? '#7FD4A8' : '#1A1F2B', m.x+22, m.y+4, 68, 40, 2);
+  if(lig){
+    cx.fillStyle='rgba(20,40,30,.55)';
+    for(let i=0;i<5;i++) cx.fillRect(m.x+26, m.y+9+i*7, 20+((i*13)%38), 3);
+  }
+  fill('#2A3040', m.x+50, m.y+48, 12, 8);
+  fill('#2A3040', m.x+40, m.y+56, 32, 4, 2);
+  // tampo
+  fill('#B0764A', m.x, m.y+60, m.w, 9, 3);
+  fill('#8C5A33', m.x+6, m.y+69, 7, m.h-70);
+  fill('#8C5A33', m.x+m.w-13, m.y+69, 7, m.h-70);
+  // teclado + caneca
+  fill('#3A4250', m.x+28, m.y+53, 46, 7, 2);
+  fill('#E0503A', m.x+84, m.y+50, 14, 12, 3);
+}
+function sofaTV(){
+  const m = MOVEIS[6];
+  fill('#2A3040', m.x-2, m.y-104, 74, 46, 4);
+  fill(S.fazendo&&S.fazendo.tipo==='tv' ? '#8FB8E0' : '#151A24', m.x+1, m.y-101, 68, 40, 2);
+  fill('#2A3040', m.x+30, m.y-58, 10, 6);
+  fill('rgba(0,0,0,.10)', m.x+4, m.y+m.h-4, m.w, 6, 3);
+  fill('#5E6B84', m.x, m.y+14, m.w, m.h-14, 6);
+  fill('#788196', m.x+5, m.y+8, m.w-10, 20, 5);
+  fill('#4A5568', m.x, m.y+14, 9, m.h-14, 4);
+  fill('#4A5568', m.x+m.w-9, m.y+14, 9, m.h-14, 4);
+}
+function boxBanho(){
+  const m = MOVEIS[7];
+  fill('rgba(190,225,232,.5)', m.x, m.y, m.w, m.h, 4);
+  cx.strokeStyle='#9FBFC6'; cx.lineWidth=2; rr(m.x,m.y,m.w,m.h,4); cx.stroke();
+  fill('#8892A0', m.x+m.w/2-3, m.y+6, 6, 16, 2);
+  fill('#B8C4CC', m.x+m.w/2-11, m.y+20, 22, 7, 3);
+  if(S.fazendo && S.fazendo.tipo==='banho'){
+    cx.strokeStyle='rgba(140,200,235,.75)'; cx.lineWidth=1.6;
+    for(let i=0;i<8;i++){ const xx=m.x+m.w/2-16+i*4.5; cx.beginPath(); cx.moveTo(xx,m.y+28); cx.lineTo(xx-3,m.y+92); cx.stroke(); }
+  }
+  fill('#DCE8EA', m.x+4, m.y+m.h-10, m.w-8, 10, 3);
+}
+function piaBanheiro(){
+  const m = MOVEIS[8];
+  fill('#EFF3F5', m.x, m.y+22, m.w, 20, 5);
+  fill('#D6DEE2', m.x+12, m.y+26, m.w-24, 10, 4);
+  fill('#8892A0', m.x+m.w/2-2, m.y+12, 4, 12, 2);
+  fill('#E8EDF0', m.x+10, m.y-42, m.w-20, 46, 5);
+  cx.strokeStyle='#B8C4CC'; cx.lineWidth=2; rr(m.x+10,m.y-42,m.w-20,46,5); cx.stroke();
+  fill('#B4763F', m.x+6, m.y+42, m.w-12, m.h-42, 3);
+}
+function vasoSan(){
+  const m = MOVEIS[9];
+  fill('#EFF3F5', m.x+6, m.y+30, m.w-12, m.h-30, 6);
+  fill('#EFF3F5', m.x, m.y, m.w, 32, 4);
+  fill('#DCE4E8', m.x+4, m.y+34, m.w-8, 12, 6);
+}
+function portaSaida(){
+  const m = MOVEIS[10];
+  fill('#6B4526', m.x-3, m.y-3, m.w+6, m.h+3, 3);
+  fill('#8C5A33', m.x, m.y, m.w, m.h, 2);
+  fill('#7A4C2B', m.x+7, m.y+10, m.w-14, 34, 2);
+  fill('#7A4C2B', m.x+7, m.y+52, m.w-14, 44, 2);
+  fill('#F2A03D', m.x+m.w-13, m.y+m.h/2, 6, 6, 3);
+}
+function desenharSujeira(){
+  const n = Math.floor(S.sujeira/12);
+  cx.globalAlpha = .55;
+  for(let i=0;i<n;i++){
+    const c = COMODOS[i%3];
+    const x = 30 + ((i*137)%(W-90));
+    const y = c.piso - 8 - ((i*29)%10);
+    cx.fillStyle = i%3===0 ? '#8A7A66' : (i%3===1 ? '#A2937E' : '#6E6252');
+    cx.beginPath(); cx.ellipse(x, y, 7+(i%3)*2, 3.5, 0, 0, 7); cx.fill();
+  }
+  cx.globalAlpha = 1;
+}
+
+function posBoneco(){
+  const f = S.fazendo;
+  const mapa = {dormir:'cama', comer:'mesaCoz', banho:'box', tv:'sofa', limpar:'sofa',
+    projeto:'mesaTrab', reuniao:'mesaTrab', follow:'mesaTrab', chamado:'mesaTrab',
+    avaliacao:'mesaTrab', responderRA:'mesaTrab', curso:'mesaTrab', tania:'sofa',
+    correr:'porta', mercado:'porta', limpezaTania:'porta'};
+  const id = f ? (mapa[f.tipo]||'mesaTrab') : 'mesaTrab';
+  const m = MOVEIS.find(x => x.id === id) || MOVEIS[5];
+  if(id === 'cama')     return {x:m.x+82, y:m.y+40, deitado:true};
+  if(id === 'mesaTrab') return {x:m.x+m.w/2, y:MOVEIS[5].y+96};
+  if(id === 'sofa')     return {x:m.x+m.w/2, y:m.y+30};
+  if(id === 'box')      return {x:m.x+m.w/2, y:m.y+112};
+  if(id === 'porta')    return {x:m.x+m.w/2, y:m.y+m.h-8, fora:true};
+  return {x:m.x+m.w/2, y:m.y+m.h+4};
+}
+
+function desenharBoneco(){
+  const p = posBoneco();
+  const f = S.fazendo;
+  const bob = (f && ['projeto','chamado','reuniao','follow','limpar'].includes(f.tipo)) ? Math.sin(bounce*2)*1.5 : 0;
+
+  if(p.deitado){
+    fill('#4C8FD6', p.x-38, p.y+8, 76, 22, 8);
+    fill('#F0C9A0', p.x+30, p.y+4, 17, 17, 8);
+    fill('#3B2A20', p.x+30, p.y+2, 17, 8, 4);
+    cx.fillStyle='rgba(255,255,255,.75)'; cx.font='600 13px Figtree';
+    cx.fillText('z', p.x+52, p.y-2 + Math.sin(bounce)*2);
+    cx.fillText('Z', p.x+58, p.y-11 + Math.sin(bounce+1)*2);
+    return;
+  }
+  const y = p.y + bob;
+  fill('rgba(0,0,0,.16)', p.x-13, y+1, 26, 6, 4);
+  // pernas
+  fill('#3A4560', p.x-9, y-20, 7, 21, 3);
+  fill('#3A4560', p.x+2,  y-20, 7, 21, 3);
+  // tronco
+  const cor = S.depre ? '#5C6478' : (S.b.estresse>80 ? '#8E6BD9' : '#4C8FD6');
+  fill(cor, p.x-12, y-46, 24, 28, 7);
+  // braços
+  fill(cor, p.x-17, y-44, 6, 20, 3);
+  fill(cor, p.x+11, y-44, 6, 20, 3);
+  // cabeça
+  fill('#F0C9A0', p.x-9, y-64, 18, 18, 8);
+  fill('#3B2A20', p.x-9, y-65, 18, 8, 4);
+  // olhos / humor
+  cx.fillStyle = '#2A2018';
+  if(S.depre || S.b.animo < 25){
+    cx.fillRect(p.x-6, y-55, 4, 1.8); cx.fillRect(p.x+2, y-55, 4, 1.8);
+    cx.fillRect(p.x-4, y-49, 8, 1.6);
+  } else {
+    cx.fillRect(p.x-6, y-56, 3, 3); cx.fillRect(p.x+3, y-56, 3, 3);
+    cx.strokeStyle = '#2A2018'; cx.lineWidth = 1.4;
+    cx.beginPath(); cx.arc(p.x, y-52, 4, .15, Math.PI-.15); cx.stroke();
+  }
+  if(S.b.estresse > 80){
+    cx.fillStyle='#8E6BD9'; cx.font='700 13px Figtree';
+    cx.fillText('!', p.x+14, y-58 + Math.sin(bounce*3)*2);
+  }
+}
+
+/* ---------- toque na casa ---------- */
+let tocado = null;
+cv.addEventListener('click', e => {
+  const r = cv.getBoundingClientRect();
+  const x = (e.clientX - r.left)/escala, y = (e.clientY - r.top)/escala;
+  const m = MOVEIS.find(o => x >= o.x-6 && x <= o.x+o.w+6 && y >= o.y-6 && y <= o.y+o.h+6);
+  if(!m) return;
+  tocado = {id:m.id, until: performance.now()+400};
+  menuMovel(m.id);
+});
+
+/* ---------- menus dos móveis ---------- */
+function menuMovel(id){
+  const b = S.b, o = [];
+  const podeAcordarCedo = b.energia > 50 && b.animo > 40;
+  const add = (ic,n,d,c,click,off) => o.push({ic,n,d,c,click,disabled:off});
+
+  if(id === 'cama'){
+    const ate = (hDia() < 7 ? 7-hDia() : 31-hDia());
+    add('🛏️','Dormir até de manhã', 'Recupera energia. O relógio avança.', dur(ate),
+      ()=>{ fecharSheet(); iniciar('dormir','Dormindo','até as 07:00', ate); });
+    add('😴','Cochilo de 2 horas','Alívio rápido, não resolve','2h',
+      ()=>{ fecharSheet(); iniciar('dormir','Cochilando','2 horas', 2); });
+    if(!podeAcordarCedo) o.push({ic:'⏰', n:'Acordar cedo amanhã', d:'Cansado e desmotivado demais pra isso', disabled:true});
+  }
+  if(id === 'geladeira' || id === 'fogao'){
+    add('🍳','Cozinhar e comer','+60 de fome, usa a despensa', dur(0.7),
+      ()=>{ fecharSheet(); iniciar('comer','Cozinhando','almoço decente', .7, {bom:true}); }, S.despensa < 10);
+    add('🍕','Pedir delivery','+30 de fome, tira do corpo e do bolso','R$ 45',
+      ()=>{ fecharSheet(); iniciar('comer','Esperando a entrega','comida de app', .5, {bom:false}); });
+    if(S.despensa < 10) o.push({ic:'📦', n:'Despensa vazia', d:'Precisa ir ao mercado antes de cozinhar', disabled:true});
+  }
+  if(id === 'piaCoz' || id === 'mesaCoz'){
+    add('🧹','Limpar a casa','Zera a sujeira', '1h',
+      ()=>{ fecharSheet(); iniciar('limpar','Limpando a casa','a sujeira volta sozinha', 1); });
+    add('☕','Café com a Tania','Casamento e estresse agradecem','45 min',
+      ()=>{ fecharSheet(); iniciar('tania','Tempo com a Tania','café na cozinha', .75); });
+  }
+  if(id === 'box' || id === 'piaBan' || id === 'vaso'){
+    add('🚿','Tomar banho','+70 de higiene','20 min',
+      ()=>{ fecharSheet(); iniciar('banho','No banho','', .35); });
+  }
+  if(id === 'sofa'){
+    add('📺','Ver TV','Ânimo sobe devagar, estresse cai','1h',
+      ()=>{ fecharSheet(); iniciar('tv','Vendo TV','descanso', 1); });
+    add('❤️','Ficar com a Tania','+22 casamento, −10 estresse','1h30',
+      ()=>{ fecharSheet(); iniciar('tania','Tempo com a Tania','sofá, sem celular', 1.5); });
+  }
+  if(id === 'porta'){
+    add('🏃','Sair pra correr','+corpo, −estresse, +ânimo','1h',
+      ()=>{ fecharSheet(); iniciar('correr','Correndo na rua','', 1); });
+    add('🛒','Ir ao mercado','Enche a despensa', fmt(CFG.mercado.custo),
+      ()=>{ fecharSheet(); iniciar('mercado','No mercado','', CFG.mercado.horas); });
+    add('🎓','Fazer o curso de Excel avançado','+10 de Execução, pra sempre', fmt(CFG.curso.custo),
+      ()=>{ fecharSheet(); iniciar('curso','Fazendo o curso','', CFG.curso.horas); }, S.dinheiro < CFG.curso.custo);
+  }
+  if(id === 'mesaTrab'){
+    fecharSheet(); irPara('mesa'); return;
+  }
+
+  const m = MOVEIS.find(x=>x.id===id);
+  sheet(`<h2>${m.lab}</h2><div class="sub">${hhmm(hDia())} · ${S.depre?'Você está travado. Quase nada rende.':'O que você faz agora?'}</div>`, o);
+}
+
+/* ============================================================
+   INTERFACE
+   ============================================================ */
+const ABAS = [
+  {id:'casa', ic:'🏠', n:'Casa'}, {id:'mesa', ic:'💼', n:'Mesa'},
+  {id:'zap',  ic:'💬', n:'Zap'},  {id:'grana',ic:'💰', n:'Grana'},
+  {id:'fama', ic:'⭐', n:'Fama'}, {id:'voce', ic:'🙂', n:'Você'},
+];
+let abaAtual = 'casa';
+
+function montarAbas(){
+  const el = document.getElementById('tabs');
+  el.innerHTML = ABAS.map(a =>
+    `<button data-aba="${a.id}" class="${a.id===abaAtual?'on':''}">
+       <span class="ic">${a.ic}</span><span>${a.n}</span>
+       <span class="badge" id="bd-${a.id}" style="display:none">0</span>
+     </button>`).join('');
+  el.querySelectorAll('button').forEach(b => b.onclick = () => irPara(b.dataset.aba));
+}
+function irPara(id){
+  abaAtual = id;
+  document.querySelectorAll('.view').forEach(v => v.classList.toggle('on', v.id === 'v-'+id));
+  document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.aba === id));
+  if(id === 'casa') ajustarCanvas();
+  render();
+}
+function montarVel(){
+  const el = document.getElementById('spd');
+  el.innerHTML = CFG.velLabels.map((l,i) => `<button data-v="${i}" class="${i===S.vel?'on':''}">${l}</button>`).join('');
+  el.querySelectorAll('button').forEach(b => b.onclick = () => setVel(+b.dataset.v));
+}
+function setVel(v){ S.vel = v; montarVel(); }
+
+function atualizarHud(){
+  const d = agora();
+  document.getElementById('hHora').textContent = hhmm(hDia());
+  document.getElementById('hData').textContent = DIAS[d.getDay()]+', '+d.getDate()+' de '+MESES[d.getMonth()];
+  const g = document.getElementById('cGrana');
+  g.querySelector('.v').textContent = fmt(S.dinheiro);
+  g.className = 'chip ' + (S.dinheiro < 0 ? 'neg' : '');
+  const dv = document.getElementById('cDivida');
+  dv.querySelector('.v').textContent = S.divida > 0 ? fmt(S.divida) : '—';
+  dv.className = 'chip ' + (S.divida > 0 ? 'neg' : '');
+  document.getElementById('cFama').querySelector('.v').textContent = estrelas().toFixed(1).replace('.',',')+'★';
+  const st = document.getElementById('cStress');
+  st.querySelector('.v').textContent = Math.round(S.b.estresse);
+  st.querySelector('.miniBar i').style.width = S.b.estresse+'%';
+  st.querySelector('.miniBar i').style.background = S.b.estresse>85 ? 'var(--vermelho)' : 'var(--roxo)';
+
+  const doing = document.getElementById('doing');
+  if(S.fazendo){
+    const f = S.fazendo;
+    doing.classList.add('on');
+    document.getElementById('doTxt').textContent = f.label;
+    let pct, sub;
+    if(f.tipo === 'projeto'){
+      const p = S.projetos.find(x=>x.id===f.dados.id);
+      pct = p ? p.feitas/p.horas*100 : 100;
+      sub = p ? dur(Math.max(0,p.horas-p.feitas))+' de código restante' : '';
+    } else if(f.tipo === 'chamado'){
+      const c = S.chamados.find(x=>x.id===f.dados.id);
+      pct = c ? c.feitas/c.horas*100 : 100;
+      sub = c ? dur(Math.max(0,c.horas-c.feitas))+' restante' : '';
+    } else {
+      pct = (S.t-f.ini)/(f.fim-f.ini)*100;
+      sub = dur(Math.max(0, f.fim-S.t))+' restante';
+    }
+    document.getElementById('doSub').textContent = sub;
+    document.getElementById('doBar').style.width = cl(pct,0,100)+'%';
+  } else doing.classList.remove('on');
+
+  badge('mesa', S.leads.filter(l=>['marcada','orcar','pensando'].includes(l.st)).length + S.chamados.length + S.projetos.filter(p=>p.feitas>=p.horas).length);
+  badge('fama', S.ra.abertas.length);
+}
+function badge(aba, n){
+  const el = document.getElementById('bd-'+aba);
+  if(!el) return;
+  el.style.display = n > 0 ? 'flex' : 'none';
+  el.textContent = n;
+}
+
+/* ---------- render das telas ---------- */
+let ultimoRender = 0;
+function render(leve){
+  if(leve && performance.now() - ultimoRender < 400) return;
+  ultimoRender = performance.now();
+  if(abaAtual === 'mesa') renderMesa();
+  if(abaAtual === 'zap') renderZap();
+  if(abaAtual === 'grana') renderGrana();
+  if(abaAtual === 'fama') renderFama();
+  if(abaAtual === 'voce') renderVoce();
+  atualizarHud();
+}
+
+function renderMesa(){
+  const el = document.getElementById('mesaBody');
+  let h = '';
+  const M = CFG.mercados[S.mercadoMes];
+  const rotMerc = {bom:['Mercado bom','v'], normal:['Mercado normal','o'], ruim:['Mercado ruim','r']};
+
+  h += `<div class="card ${S.mercadoMes==='ruim'?'bad':''}">
+    <div class="cardTop"><h3>Agenda</h3>
+      <span class="pill ${rotMerc[S.mercadoMes][1]}">${rotMerc[S.mercadoMes][0]}</span></div>
+    <div class="meta">Lead custa hoje <b>${fmt(S.custoLead)}</b>. ${S.mercadoMes==='ruim'
+      ? 'Caro, pouco e ruim — não dá pra confiar no volume.'
+      : (S.mercadoMes==='bom' ? 'Está pingando gente séria.' : 'Chega uma parte do que você pede.')}</div>
+    <label class="f">Leads por dia: <b id="ldN">${S.leadsDia}</b> · gasto previsto ${fmt(S.leadsDia*S.custoLead*22)}/mês</label>
+    <input type="range" min="0" max="8" value="${S.leadsDia}" id="ldR">
+    <div class="acts">
+      <button class="btn ${S.agenda?'pri':'gho'}" id="btAg">${S.agenda?'Agenda aberta':'Agenda fechada'}</button>
+    </div>
+    ${!S.agenda?'<div class="meta" style="margin-top:7px;color:var(--vermelho)">Agenda fechada derruba sua habilidade de Vendas todo dia.</div>':''}
+  </div>`;
+
+  // projetos prontos pra entregar
+  const prontos = S.projetos.filter(p => p.feitas >= p.horas);
+  if(prontos.length){
+    h += `<div class="secTit">Pronto pra entregar <span class="n">${prontos.length}</span></div>`;
+    prontos.forEach(p => {
+      h += `<div class="card good"><div class="cardTop"><h3>${p.cliente}</h3><span class="pill v">${fmt(p.preco/2)} a receber</span></div>
+        <div class="meta">${p.pedido} · ${p.contato}</div>
+        <div class="acts"><button class="btn pri" data-ent="${p.id}">Entregar e receber</button></div></div>`;
+    });
+  }
+
+  // reuniões
+  const marcadas = S.leads.filter(l => l.st === 'marcada');
+  if(marcadas.length){
+    h += `<div class="secTit">Reuniões <span class="n">${marcadas.length}</span></div>`;
+    marcadas.sort((a,b)=>a.hReuniao-b.hReuniao).forEach(l => {
+      const passou = S.t > l.hReuniao;
+      const naHora = Math.abs(S.t - l.hReuniao) <= 1;
+      h += `<div class="card ${passou?'warn':''}"><div class="cardTop"><h3>${l.empresa}</h3>
+        <span class="pill ${naHora?'o':''}">${diaRel(l.hReuniao)} ${hhmm(l.hReuniao%24)}</span></div>
+        <div class="meta">${l.nome} quer <b>${l.pedido}</b>.${passou?' <b style="color:var(--laranja)">Você passou da hora</b> — ainda dá pra recuperar hoje, mas sem o bônus.':''}</div>
+        <div class="acts"><button class="btn pri" data-reu="${l.id}" ${S.t < l.hReuniao-1?'disabled':''}>Fazer a reunião (1h)</button></div></div>`;
+    });
+  }
+
+  // orçamentos a enviar
+  const orcar = S.leads.filter(l => l.st === 'orcar');
+  if(orcar.length){
+    h += `<div class="secTit">Mandar orçamento <span class="n">${orcar.length}</span></div>`;
+    orcar.forEach(l => {
+      h += `<div class="card warn"><div class="cardTop"><h3>${l.empresa}</h3><span class="pill o">${CFG.tipos[l.tipo].nome}</span></div>
+        <div class="meta">${l.nome} · ${l.pedido}${l.frio?' · <b style="color:var(--laranja)">ficou morno na reunião</b>':''}</div>
+        <div class="acts"><button class="btn pri" data-orc="${l.id}">Definir preço</button></div></div>`;
+    });
+  }
+
+  // pensando
+  const pens = S.leads.filter(l => l.st === 'pensando');
+  if(pens.length){
+    h += `<div class="secTit">Ficou de pensar <span class="n">${pens.length}</span></div>`;
+    pens.forEach(l => {
+      h += `<div class="card"><div class="cardTop"><h3>${l.empresa}</h3><span class="pill">${fmt(l.orcamento)}</span></div>
+        <div class="meta">${l.nome} · ${l.follows} de ${CFG.followMax} cutucadas</div>
+        <div class="acts"><button class="btn pri" data-fol="${l.id}" ${l.follows>=CFG.followMax?'disabled':''}>Cobrar no zap (15 min)</button></div></div>`;
+    });
+  }
+
+  // projetos em execução
+  const emCurso = S.projetos.filter(p => p.feitas < p.horas);
+  if(emCurso.length){
+    h += `<div class="secTit">Projetos em execução <span class="n">${emCurso.length}</span></div>`;
+    emCurso.forEach(p => {
+      const falta = p.horas - p.feitas;
+      const atraso = S.t > p.prazo;
+      const restaPrazo = p.prazo - S.t;
+      h += `<div class="card ${atraso?'bad':''}"><div class="cardTop"><h3>${p.cliente}</h3>
+        <span class="pill ${atraso?'r':''}">${atraso?'ATRASADO':'faltam '+Math.ceil(restaPrazo/24)+'d'}</span></div>
+        <div class="meta">${p.pedido} · ${fmt(p.preco)} · ${dur(falta)} de código</div>
+        <div class="prog2"><i style="width:${p.feitas/p.horas*100}%"></i></div>
+        <div class="acts">
+          <button class="btn pri" data-tra="${p.id}" data-h="2">Codar 2h</button>
+          <button class="btn" data-tra="${p.id}" data-h="4">4h</button>
+          <button class="btn" data-tra="${p.id}" data-h="8">8h</button>
+        </div></div>`;
+    });
+  }
+
+  // chamados
+  if(S.chamados.length){
+    h += `<div class="secTit">Suporte <span class="n">${S.chamados.length}</span></div>`;
+    S.chamados.forEach(c => {
+      h += `<div class="card ${c.grande||c.dias>=2?'bad':'warn'}"><div class="cardTop"><h3>${c.cliente}</h3>
+        <span class="pill ${c.grande?'r':'o'}">${c.grande?'problemão':'chamado'}</span></div>
+        <div class="meta">${c.desc} · ${dur(c.horas-c.feitas)}${c.dias?' · aberto há '+c.dias+'d':''}</div>
+        ${c.dias>=2?'<div class="meta" style="color:var(--vermelho)">Mais um dia e ele reclama.</div>':''}
+        <div class="acts"><button class="btn pri" data-cha="${c.id}">Resolver</button></div></div>`;
+    });
+  }
+
+  // entregues sem avaliação
+  const semAval = S.entregues.filter(e => !e.avaliado);
+  if(semAval.length){
+    h += `<div class="secTit">Clientes entregues <span class="n">${semAval.length}</span></div>`;
+    semAval.forEach(e => {
+      const feliz = e.satisfacao >= 80;
+      h += `<div class="card"><div class="cardTop"><h3>${e.cliente}</h3>
+        <span class="pill ${feliz?'v':(e.satisfacao>=55?'o':'r')}">satisfação ${Math.round(e.satisfacao)}</span></div>
+        <div class="meta">${feliz?'Esse aí dá 5 estrelas se você pedir.':(e.satisfacao>=55?'Talvez dê 4. Talvez 3.':'Não peça. Ele vai te dar 1 ou 2.')}</div>
+        <div class="acts"><button class="btn ${feliz?'pri':'gho'}" data-ava="${e.id}">Pedir avaliação no Google</button></div></div>`;
+    });
+  }
+
+  if(!marcadas.length && !orcar.length && !pens.length && !emCurso.length && !S.chamados.length && !prontos.length){
+    h += `<div class="vazio">Nada na mesa agora. ${S.agenda?'Os leads pingam durante o dia útil, das 9h às 18h.':'Sua agenda está fechada — nenhum lead vai chegar.'}</div>`;
+  }
+
+  el.innerHTML = h;
+  const r = document.getElementById('ldR');
+  if(r){
+    r.oninput = () => { S.leadsDia = +r.value; document.getElementById('ldN').textContent = r.value;
+      document.querySelector('#mesaBody label.f').innerHTML = `Leads por dia: <b id="ldN">${S.leadsDia}</b> · gasto previsto ${fmt(S.leadsDia*S.custoLead*22)}/mês`; };
+  }
+  const ag = document.getElementById('btAg');
+  if(ag) ag.onclick = () => { S.agenda = !S.agenda; renderMesa(); };
+  el.querySelectorAll('[data-reu]').forEach(b => b.onclick = () => fazerReuniao(+b.dataset.reu));
+  el.querySelectorAll('[data-orc]').forEach(b => b.onclick = () => abrirOrcamento(+b.dataset.orc));
+  el.querySelectorAll('[data-fol]').forEach(b => b.onclick = () => fazerFollow(+b.dataset.fol));
+  el.querySelectorAll('[data-tra]').forEach(b => b.onclick = () => trabalhar(+b.dataset.tra, +b.dataset.h));
+  el.querySelectorAll('[data-ent]').forEach(b => b.onclick = () => entregar(+b.dataset.ent));
+  el.querySelectorAll('[data-cha]').forEach(b => b.onclick = () => atenderChamado(+b.dataset.cha));
+  el.querySelectorAll('[data-ava]').forEach(b => b.onclick = () => pedirAvaliacao(+b.dataset.ava));
+}
+
+function renderZap(){
+  const el = document.getElementById('zapBody');
+  if(!S.zap.length){ el.innerHTML = '<div class="vazio">Nenhuma conversa ainda. O zap enche quando você começa a mandar orçamento e cobrar resposta.</div>'; return; }
+  el.innerHTML = S.zap.map(m => `
+    <div class="card" style="${m.meu?'margin-left:36px;background:var(--carta2)':'margin-right:36px'}">
+      <div class="cardTop"><h3>${m.meu?'Você':m.de}</h3><span class="pill">${hhmm(m.t%24)}</span></div>
+      <div class="meta">${m.txt}</div>
+    </div>`).join('');
+}
+
+function renderGrana(){
+  const el = document.getElementById('granaBody');
+  const total = CFG.contas.reduce((a,c)=>a+c.v,0);
+  const d = agora();
+  const diasPra5 = (CFG.diaContas - d.getDate() + 31) % 31;
+  const f = nomeFaixa(S.divida);
+  let h = '';
+
+  h += `<div class="card">
+    <div class="meta">Na conta</div>
+    <div class="big" style="color:${S.dinheiro<0?'var(--vermelho)':'var(--verde)'}">${fmt(S.dinheiro)}</div>
+    <div class="meta" style="margin-top:6px">Faturado neste mês <b>${fmt(S.faturadoMes)}</b> · gasto com lead <b>${fmt(S.gastoLeadsMes)}</b></div>
+  </div>`;
+
+  h += `<div class="secTit">Contas do dia 5</div>
+    <div class="card ${diasPra5<=3 && S.dinheiro<total ? 'bad':''}">
+      ${CFG.contas.map(c=>`<div class="kv"><span>${c.n}</span><span>${fmt(c.v)}</span></div>`).join('')}
+      <div class="kv" style="margin-top:4px"><span><b>Total</b></span><span><b>${fmt(total)}</b></span></div>
+      <div class="meta" style="margin-top:8px">${diasPra5===0?'<b style="color:var(--laranja)">É hoje.</b>':'Vencem em <b>'+diasPra5+' dia'+(diasPra5>1?'s':'')+'</b>.'}
+      ${S.dinheiro < total ? '<b style="color:var(--vermelho)"> Falta '+fmt(total-S.dinheiro)+'.</b>' : ' Você tem com o que pagar.'}</div>
+      <div class="meta" style="margin-top:6px;color:var(--texto3)">Comida não entra aqui — sai nas idas ao mercado, ${fmt(CFG.mercado.custo)} por vez.</div>
+    </div>`;
+
+  if(S.divida > 0){
+    const j = jurosMes();
+    h += `<div class="secTit">Dívida</div>
+      <div class="card bad">
+        <div class="big" style="color:var(--vermelho)">${fmt(S.divida)}</div>
+        <div class="meta" style="margin-top:4px">Faixa atual: <b>${f.nome}</b> a ${(f.nome==='Agiota'?taxaAgiota()*100:f.juros*100).toFixed(0)}% ao mês.
+        No dia 1 entram <b>${fmt(j)}</b> de juros.</div>
+        <div class="acts">
+          ${[1000,5000,S.divida].filter((v,i,a)=>v>0 && a.indexOf(v)===i).map(v=>
+            `<button class="btn ${v===S.divida?'pri':''}" data-pag="${v}" ${S.dinheiro<Math.min(v,S.divida)?'disabled':''}>Pagar ${v===S.divida?'tudo':fmt(v)}</button>`).join('')}
+        </div>
+      </div>
+      <div class="card">
+        ${CFG.divida.map((fx,i)=>{
+          const de = i===0?0:CFG.divida[i-1].ate;
+          const dentro = S.divida > de;
+          const taxa = fx.nome==='Agiota' ? taxaAgiota() : fx.juros;
+          return `<div class="kv"><span style="${dentro?'color:var(--vermelho);font-weight:600':'color:var(--texto3)'}">${fx.nome}${fx.ate===Infinity?' (acima de R$ 20 mil)':' (até '+fmt(fx.ate)+')'}</span><span>${(taxa*100).toFixed(0)}%</span></div>`;
+        }).join('')}
+      </div>`;
+  } else {
+    h += `<div class="secTit">Dívida</div><div class="card good"><div class="meta">Zerada. Enquanto durar.</div></div>`;
+  }
+
+  h += `<div class="secTit">Extrato</div>`;
+  h += S.extrato.length
+    ? `<div class="card">${S.extrato.slice(0,22).map(e=>{
+        const dd = new Date(D0.getTime()+e.t*3600e3);
+        return `<div class="kv"><span style="color:var(--texto2)">${dd.getDate()}/${dd.getMonth()+1} ${e.desc}</span>
+        <span style="color:${e.v<0?(e.divida?'var(--vermelho)':'var(--texto)'):'var(--verde)'}">${e.v>0?'+':''}${fmt(e.v)}</span></div>`;
+      }).join('')}</div>`
+    : '<div class="vazio">Sem movimento ainda.</div>';
+
+  el.innerHTML = h;
+  el.querySelectorAll('[data-pag]').forEach(b => b.onclick = () => {
+    const v = Math.min(+b.dataset.pag, S.divida, S.dinheiro);
+    if(v <= 0) return;
+    S.dinheiro -= v; S.divida -= v; ex('Abatimento da dívida', -v);
+    toast('Abateu '+fmt(v)+'. Falta '+fmt(S.divida)+'.','v');
+    renderGrana();
+  });
+}
+
+function renderFama(){
+  const el = document.getElementById('famaBody');
+  const e = estrelas();
+  const cheias = Math.round(e);
+  let h = '';
+  h += `<div class="card ${e>=4.7?'good':(e>=4?'warn':'bad')}">
+    <div class="cardTop"><h3>Google</h3><span class="pill ${e>=4.7?'v':(e>=4?'o':'r')}">${S.google.n} avaliações</span></div>
+    <div class="big">${e.toFixed(1).replace('.',',')}</div>
+    <div class="stars">${'★'.repeat(cheias)}${'☆'.repeat(5-cheias)}</div>
+    <div class="meta" style="margin-top:7px">${e>=4.9?'Cinco estrelas cravadas. É isso que segura o preço lá em cima.'
+      :(e>=4.5?'Ainda forte, mas já saiu do 5,0. Cada nota baixa custa caro daqui pra frente.'
+      :'A média caiu. O lead chega desconfiado e exigindo desconto.')}</div>
+  </div>`;
+
+  h += `<div class="secTit">Reclame Aqui <span class="n">${S.ra.abertas.length} aberta${S.ra.abertas.length===1?'':'s'}</span></div>`;
+  if(S.ra.abertas.length){
+    S.ra.abertas.forEach(r => {
+      h += `<div class="card bad"><div class="cardTop"><h3>${r.cliente}</h3><span class="pill r">sem resposta</span></div>
+        <div class="meta">Reclamou que você <b>${r.motivo}</b>. Enquanto estiver aberta, chega menos lead e o estresse sobe todo dia.</div>
+        <div class="acts"><button class="btn pri" data-ra="${r.id}">Responder (30 min)</button></div></div>`;
+    });
+  } else {
+    h += `<div class="card good"><div class="meta">Nada aberto agora.</div></div>`;
+  }
+
+  h += `<div class="card"><div class="cardTop"><h3>Histórico</h3><span class="pill ${S.ra.historico?'o':'v'}">${S.ra.historico} respondida${S.ra.historico===1?'':'s'}</span></div>
+    <div class="meta">${S.ra.historico
+      ? 'Reclamação respondida sai da tela e continua no histórico. Quanto mais acumula, mais o cliente exige preço baixo pra fechar. Você faz tudo certo e o negócio aperta assim mesmo.'
+      : 'Nenhuma reclamação até hoje. Vale dinheiro.'}</div></div>`;
+
+  const ri2 = repIndice();
+  h += `<div class="secTit">O que isso controla</div><div class="card">
+    <div class="kv"><span>Índice de reputação</span><span style="color:${ri2>0.2?'var(--verde)':(ri2<-0.2?'var(--vermelho)':'var(--texto)')}">${(ri2*100).toFixed(0)}</span></div>
+    <div class="kv"><span>Teto de preço do cliente</span><span>${ri2>=0?'+':''}${(ri2*16).toFixed(0)}%</span></div>
+    <div class="kv"><span>Chance na reunião</span><span>${ri2>=0?'+':''}${(ri2*12).toFixed(0)}%</span></div>
+  </div>`;
+
+  el.innerHTML = h;
+  el.querySelectorAll('[data-ra]').forEach(b => b.onclick = () => responderRA(+b.dataset.ra));
+}
+
+const BARRAS = [
+  {k:'energia', n:'Energia', c:'#F2A03D', baixo:'Abaixo de 30 você trabalha 40% mais devagar.'},
+  {k:'fome', n:'Fome', c:'#E07A9B', baixo:'Abaixo de 20 derruba energia e ânimo junto.'},
+  {k:'higiene', n:'Higiene', c:'#4C8FD6', baixo:'Abaixo de 25 a reunião vai mal. O cliente percebe.'},
+  {k:'animo', n:'Ânimo', c:'#4CAF7D', baixo:'Abaixo de 10 por dois dias você trava de vez.'},
+  {k:'corpo', n:'Corpo', c:'#E0503A', baixo:'Abaixo de 40 sua energia máxima cai.'},
+  {k:'casamento', n:'Casamento', c:'#E07A9B', baixo:'Abaixo de 30 ela cobra, e cobra caro.'},
+];
+function renderVoce(){
+  const el = document.getElementById('voceBody');
+  let h = '';
+  if(S.depre){
+    h += `<div class="card bad"><div class="cardTop"><h3>Você travou</h3><span class="pill r">depressão</span></div>
+      <div class="meta">Semanas ignorando tudo cobraram o preço. Você rende 40% e não consegue conduzir reunião nenhuma.
+      Sai com dias de descanso — dormir, TV, corrida, tempo com a Tania — e o ânimo volta a <b>3 pontos por dia</b>. Não tem atalho.</div></div>`;
+  }
+  if(S.b.estresse > 85){
+    h += `<div class="card bad"><div class="cardTop"><h3>Ansiedade</h3><span class="pill x">estresse ${Math.round(S.b.estresse)}</span></div>
+      <div class="meta">Você erra mais e dorme mal. Corrida, TV e tempo com a Tania derrubam o estresse. Resolver pendência também.</div></div>`;
+  }
+
+  h += `<div class="secTit">Barras</div><div class="card"><div class="bars">`;
+  BARRAS.forEach(b => {
+    const v = S.b[b.k];
+    h += `<div class="bar"><div class="l"><span>${b.n}</span><span>${Math.round(v)}</span></div>
+      <div class="t"><i style="width:${v}%;background:${v<25?'#E0503A':b.c}"></i></div>
+      ${v<30?`<div class="meta" style="margin-top:4px;color:var(--vermelho);font-size:11px">${b.baixo}</div>`:''}</div>`;
+  });
+  h += `<div class="bar"><div class="l"><span>Estresse</span><span>${Math.round(S.b.estresse)}</span></div>
+    <div class="t"><i style="width:${S.b.estresse}%;background:${S.b.estresse>85?'#E0503A':'#8E6BD9'}"></i></div></div>`;
+  h += `</div></div>`;
+
+  h += `<div class="secTit">Habilidades</div><div class="card"><div class="bars">
+    ${[['vendas','Vendas','Chance de fechar e o teto de preço. Sobe a cada reunião, cai 0,8 por dia sem reunião.'],
+       ['execucao','Execução','Corta até 30% das horas do projeto. Sobe trabalhando, cai parado.'],
+       ['suporte','Suporte','Chamado mais rápido e menos reclamação.']].map(([k,n,d])=>{
+      const v = S.hab[k];
+      return `<div class="bar"><div class="l"><span>${n}</span><span>${Math.round(v)}</span></div>
+        <div class="t"><i style="width:${v}%;background:#8E6BD9"></i></div>
+        <div class="meta" style="margin-top:4px;font-size:11px">${d}</div></div>`;
+    }).join('')}
+  </div></div>`;
+
+  h += `<div class="secTit">Casa</div><div class="card">
+    <div class="kv"><span>Despensa</span><span style="color:${S.despensa<20?'var(--vermelho)':'var(--texto)'}">${Math.round(S.despensa)}%</span></div>
+    <div class="kv"><span>Sujeira</span><span style="color:${S.sujeira>60?'var(--vermelho)':'var(--texto)'}">${Math.round(S.sujeira)}%</span></div>
+    <div class="kv"><span>Eficiência agora</span><span>${(eficiencia()*100).toFixed(0)}%</span></div>
+  </div>`;
+
+  h += `<div class="secTit">Partida</div><div class="card">
+    <div class="kv"><span>Clientes entregues</span><span>${S.entregues.length}</span></div>
+    <div class="kv"><span>Dias jogados</span><span>${Math.floor(S.t/24)}</span></div>
+    <div class="acts"><button class="btn dan" id="btReset">Começar de novo</button></div>
+  </div>`;
+  h += `<div class="saveTag" id="saveTag">salvo</div>`;
+
+  el.innerHTML = h;
+  document.getElementById('btReset').onclick = () => {
+    sheet('<h2>Começar de novo?</h2><div class="sub">A partida atual some. Não tem volta.</div>', [
+      {ic:'🗑️', n:'Sim, apagar tudo', click:()=>{ S = novoJogo(); fecharSheet(); salvar(); irPara('casa'); toast('Partida nova. Boa sorte.','o'); }},
+      {ic:'↩︎', n:'Deixa quieto', click:fecharSheet},
+    ]);
+  };
+}
+
+/* ---------- sheet e toast ---------- */
+function sheet(html, opcoes){
+  const box = document.getElementById('sheetBox');
+  box.innerHTML = html + opcoes.map((o,i) =>
+    `<button class="opt" data-i="${i}" ${o.disabled?'disabled':''}>
+      <span class="ic">${o.ic||'•'}</span>
+      <span class="b"><span class="n">${o.n}</span>${o.d?`<span class="d">${o.d}</span>`:''}</span>
+      ${o.c?`<span class="c">${o.c}</span>`:''}
+    </button>`).join('');
+  box.querySelectorAll('.opt').forEach(b => {
+    if(b.disabled) return;
+    b.onclick = () => { const o = opcoes[+b.dataset.i]; if(o.click) o.click(); };
+  });
+  document.getElementById('sheet').classList.add('on');
+}
+function fecharSheet(){ document.getElementById('sheet').classList.remove('on'); }
+document.getElementById('sheet').addEventListener('click', e => { if(e.target.id === 'sheet') fecharSheet(); });
+
+function toast(txt, tipo, ms){
+  const el = document.createElement('div');
+  el.className = 'toast ' + (tipo||'');
+  el.innerHTML = txt;
+  const box = document.getElementById('toasts');
+  box.appendChild(el);
+  while(box.children.length > 4) box.removeChild(box.firstChild);
+  setTimeout(() => { el.style.transition='opacity .3s'; el.style.opacity='0'; setTimeout(()=>el.remove(), 320); }, ms||4200);
+}
+
+/* ---------- save ---------- */
+let dbRef = null, salvarTimer = null;
+const CHAVE = 'vidadedev.save.v1';
+
+function salvar(){
+  try{ localStorage.setItem(CHAVE, JSON.stringify(S)); }catch(e){}
+  clearTimeout(salvarTimer);
+  salvarTimer = setTimeout(async () => {
+    if(!dbRef) return;
+    try{
+      await dbRef.doc('saves/principal').set({estado: JSON.stringify(S), quando: Date.now()});
+      const t = document.getElementById('saveTag');
+      if(t) t.textContent = 'salvo na nuvem · ' + new Date().toLocaleTimeString('pt-BR');
+    }catch(e){}
+  }, 4000);
+}
+
+async function carregar(){
+  let local = null;
+  try{ const raw = localStorage.getItem(CHAVE); if(raw) local = JSON.parse(raw); }catch(e){}
+  let nuvem = null;
+  try{
+    dbRef = await claude.use('db');
+    if(dbRef){
+      const d = await dbRef.doc('saves/principal').get();
+      if(d && d.estado) nuvem = JSON.parse(d.estado);
+    }
+  }catch(e){ dbRef = null; }
+
+  let escolhido = local;
+  if(nuvem && (!local || nuvem.t > local.t)) escolhido = nuvem;
+  if(escolhido && escolhido.v === 1){
+    S = Object.assign(novoJogo(), escolhido);
+    S.fazendo = null;
+    S.vel = 0;
+    toast('Partida recuperada — dia ' + Math.floor(S.t/24) + '. O relógio está pausado.', 'o', 6000);
+    render(); montarVel();
+  }
+}
+
+/* ---------- início ---------- */
+function comecar(){
+  S = novoJogo();
+  const d = agora();
+  S.ultimoMes = d.getMonth();
+  montarAbas(); montarVel(); ajustarCanvas(); render();
+  document.getElementById('doStop').onclick = pararAcao;
+  window.addEventListener('resize', ajustarCanvas);
+  requestAnimationFrame(loop);
+
+  setTimeout(() => {
+    sheet(
+      `<h2>Vida de Dev</h2>
+       <div class="sub">Você faz sistemas sob medida na mesa que fica ao lado da sua cama.
+       As contas são <b>${fmt(CFG.contas.reduce((a,c)=>a+c.v,0))}</b> todo dia 5, mais o mercado.
+       Não tem game over — tem mês bom e tem buraco.</div>
+       <div class="meta" style="margin-bottom:12px;line-height:1.6">
+         <b>Toque nos móveis</b> pra comer, dormir, tomar banho e sair.<br>
+         <b>A mesa de trabalho</b> abre o funil: lead, reunião, orçamento, projeto, suporte.<br>
+         O relógio corre sozinho — 1 hora de jogo em 10 segundos.
+       </div>`,
+      [{ic:'▶️', n:'Começar', d:'Segunda-feira, 7 da manhã', click:()=>{ fecharSheet(); setVel(3); }}]
+    );
+  }, 350);
+
+  carregar();
+  setInterval(salvar, 30000);
+}
+comecar();
+</script>
+
+</body>
+</html>
