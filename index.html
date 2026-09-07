@@ -693,7 +693,7 @@ function criarLead(){
     orcamento:0, noShow: Math.random() < CFG.noShow,
   };
   S.leads.push(l);
-  toast('Lead novo: <b>'+l.empresa+'</b>. Reunião '+diaRel(hR)+' às '+hhmm(hR%24)+'.', 'o');
+  toast('Lead novo: <b>'+l.empresa+'</b>. Reunião '+diaRel(hR)+' às '+hhmm(hDe(hR))+'.', 'o');
 }
 
 function diaRel(h){
