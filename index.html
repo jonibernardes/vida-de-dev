@@ -600,7 +600,7 @@ function repIndice(){
   return cl(v, -1, 1);
 }
 function eficiencia(){
-  let f = 1 + 0.43*S.hab.execucao/100;
+  let f = 1 + 0.78*S.hab.execucao/100;
   if(S.b.energia < 30) f *= 0.6;
   if(S.b.animo < 30) f *= 0.75;
   if(S.b.fome < 20) f *= 0.8;
@@ -1193,7 +1193,8 @@ function sortearEvento(){
 function fazerReuniao(id){
   const l = S.leads.find(x => x.id === id);
   if(!l) return;
-  iniciar('reuniao', 'Reunião com '+l.empresa, l.nome, 1, {id});
+  // 30 min: com projeto de R$ 800, uma hora de reunião comia o lucro inteiro
+  iniciar('reuniao', 'Reunião com '+l.empresa, l.nome, 0.5, {id});
 }
 function fimReuniao(id){
   const l = S.leads.find(x => x.id === id);
@@ -2229,7 +2230,7 @@ function renderMesa(){
       h += `<div class="card ${passou?'warn':''}"><div class="cardTop"><h3>${l.empresa}</h3>
         <span class="pill ${naHora?'o':''}">${diaRel(l.hReuniao)} ${hhmm(hDe(l.hReuniao))}</span></div>
         <div class="meta">${l.nome} quer <b>${l.pedido}</b>.${passou?' <b style="color:var(--laranja)">Você passou da hora</b> — ainda dá pra recuperar hoje, mas sem o bônus.':''}</div>
-        <div class="acts"><button class="btn pri" data-reu="${l.id}" ${S.t < l.hReuniao-1?'disabled':''}>Fazer a reunião (1h)</button></div></div>`;
+        <div class="acts"><button class="btn pri" data-reu="${l.id}" ${S.t < l.hReuniao-1?'disabled':''}>Fazer a reunião (30 min)</button></div></div>`;
     });
   }
 
@@ -2578,7 +2579,7 @@ function renderVoce(){
 
   h += `<div class="secTit">Habilidades</div><div class="card"><div class="bars">
     ${[['vendas','Vendas','Chance de fechar e o teto de preço. Sobe a cada reunião, cai 0,8 por dia sem reunião.'],
-       ['execucao','Execução','Corta até 30% das horas do projeto. Sobe trabalhando, cai parado.'],
+       ['execucao','Execução','Corta até 44% das horas do projeto. Sobe trabalhando, cai parado.'],
        ['suporte','Suporte','Chamado mais rápido e menos reclamação.']].map(([k,n,d])=>{
       const v = S.hab[k];
       return `<div class="bar"><div class="l"><span>${n}</span><span>${Math.round(v)}</span></div>
