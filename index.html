@@ -3019,6 +3019,12 @@ function comecar(){
     const vital = atalho.find(x => AJUDA[x]);
     if(vital) abrirVital(vital);
     if(atalho.includes('voce')) abrirVoce();
+    // ?v=demo,agindo,insta  mostra a animação de uma ação parada no tempo
+    const agindo = atalho.find(x => ICONE_ACAO[x]);
+    if(agindo){
+      S.fazendo = {tipo:agindo, label:'Demonstração: '+agindo, sub:'tempo parado', ini:S.t, fim:S.t+99, dados:{comida:CFG.comidas[0]}, sozinho:agindo==='insta'};
+      render();
+    }
     if(atalho.includes('festa')) setInterval(() => { festa(60); brilho(); }, 800);
     if(atalho.includes('susto')) setInterval(() => susto(true), 900);
     return;
