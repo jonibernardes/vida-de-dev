@@ -95,10 +95,10 @@ h1,h2,h3{font-family:'Bricolage Grotesque',system-ui,sans-serif; margin:0; text-
 .miniBar{height:4px; border-radius:3px; background:var(--linha); overflow:hidden; margin-top:3px}
 .miniBar i{display:block; height:100%; border-radius:3px; background:var(--roxo)}
 
-/* vitais: coluna em pé, no alto à esquerda, sempre visível */
+/* painel da direita: como você está em cima, o que falta fazer embaixo */
 #vitais{
-  position:absolute; left:6px; top:6px; z-index:20;
-  display:flex; flex-direction:column; gap:4px; width:62px;
+  position:absolute; right:5px; top:5px; z-index:20;
+  display:flex; flex-direction:column; gap:3px; width:66px;
 }
 #vitais button{
   background:rgba(35,46,74,.90); border-radius:9px; padding:4px 5px;
@@ -123,33 +123,34 @@ h1,h2,h3{font-family:'Bricolage Grotesque',system-ui,sans-serif; margin:0; text-
   position:absolute; top:-1px; width:2px; height:6px; background:rgba(255,255,255,.75); border-radius:1px;
 }
 
-/* ações grandes, em pé, no canto inferior direito */
-#acoes{
-  position:absolute; right:7px; bottom:8px; z-index:20;
-  display:flex; flex-direction:column-reverse; gap:5px; align-items:flex-end;
-  max-height:calc(100% - 14px); overflow-y:auto; padding:2px;
-  scrollbar-width:none;
+/* o que falta fazer, logo abaixo dos vitais */
+#tarefas{
+  position:absolute; right:5px; z-index:20;
+  display:flex; flex-direction:column; gap:4px; width:66px;
 }
-#acoes::-webkit-scrollbar{display:none}
-#acoes button{
-  width:56px; height:52px; border-radius:15px;
-  background:rgba(35,46,74,.93); box-shadow:0 3px 10px rgba(6,10,20,.5);
-  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px;
-  backdrop-filter:blur(3px); border:1px solid rgba(255,255,255,.06);
+#tarefas .tsec{
+  font-size:7.5px; font-weight:800; letter-spacing:.7px; text-transform:uppercase;
+  color:rgba(255,255,255,.5); text-align:center; padding:2px 0 0;
+  text-shadow:0 1px 3px rgba(6,10,20,.9);
 }
-#acoes button:active{transform:scale(.92)}
-#acoes button .ai{font-size:21px; line-height:1}
-#acoes button .an{font-size:8.5px; font-weight:700; letter-spacing:.2px; color:var(--texto2)}
-#acoes button.destaque{background:var(--laranja); border-color:transparent}
-#acoes button.destaque .an{color:#231603}
-#acoes button.travado{opacity:.4}
-#acoes button .selo{
-  position:absolute; margin:-40px 0 0 34px; background:var(--vermelho); color:#fff;
-  font-size:9px; font-weight:800; min-width:16px; height:16px; border-radius:8px;
-  display:flex; align-items:center; justify-content:center; padding:0 3px;
+#tarefas button{
+  background:rgba(35,46,74,.93); border-radius:10px; padding:5px 4px 6px;
+  display:flex; flex-direction:column; align-items:center; gap:1px;
+  box-shadow:0 2px 9px rgba(6,10,20,.5); border-left:3px solid var(--linha);
+  backdrop-filter:blur(3px);
 }
-.view.on#v-casa{padding-left:0}
-#v-zap .pad, #v-grana .pad, #v-fama .pad{padding-left:74px}
+#tarefas button:active{transform:scale(.93)}
+#tarefas button.urgente{border-left-color:var(--vermelho)}
+#tarefas button.atencao{border-left-color:var(--laranja)}
+#tarefas button.ok{border-left-color:var(--verde)}
+#tarefas .ti{font-size:15px; line-height:1.1}
+#tarefas .tn{font-size:8px; font-weight:700; color:var(--texto2); text-align:center; line-height:1.15}
+#tarefas .tq{font-family:'DM Mono',monospace; font-size:10px; font-weight:500; line-height:1.2}
+#tarefas .vazio2{
+  font-size:8.5px; color:rgba(255,255,255,.55); text-align:center; line-height:1.35;
+  background:rgba(35,46,74,.8); border-radius:10px; padding:7px 5px;
+}
+#v-zap .pad, #v-grana .pad, #v-fama .pad{padding-right:76px}
 /* painel de cada barra */
 .vTopo{display:flex; align-items:center; gap:11px; margin-bottom:12px}
 .vTopo .ico{font-size:27px; line-height:1}
@@ -405,7 +406,7 @@ input[type=email]{
 
   <div id="views">
     <div id="vitais"></div>
-    <div id="acoes"></div>
+    <div id="tarefas"></div>
     <section class="view on" id="v-casa">
       <div id="houseWrap"><canvas id="house"></canvas></div>
     </section>
@@ -452,7 +453,7 @@ const CFG = {
   // dinheiro parado rende 1% ao mes, creditado todo dia como no cofrinho do Mercado Pago
   rendimentoMes: 0.01,
 
-  decai: {energia:-4, fome:-5, higiene:-3, animo:-1.5},
+  decai: {energia:-4, fome:-5, higiene:-3, animo:-2.4},
   dormeEnergia: 12,
   corpoParado: -0.7,
 
@@ -656,26 +657,42 @@ function pararAcao(){
 function concluir(f){
   const d = f.dados;
   switch(f.tipo){
-    case 'dormir': break;
+    case 'dormir': {
+      // noite boa devolve ânimo; noite curta cobra
+      const horas = S.t - f.ini;
+      const g = cl((S.b.energia - 55)/45, -1, 1) * 14 * cl(horas/7, .3, 1);
+      S.b.animo = cl(S.b.animo + g, 0, 100);
+      S.b.estresse = cl(S.b.estresse - (horas >= 6 ? 8 : 2), 0, 100);
+      if(horas >= 6 && S.b.energia > 80) S.base.animo = cl(S.base.animo + .5, 0, 100);
+      if(g > 4) toast('Acordou <b>bem</b>. Ânimo em '+Math.round(S.b.animo)+'. Um banho e uma corrida terminam o serviço.','v', 6000);
+      else if(horas < 5) toast('Dormiu pouco. O dia vai custar caro.','x', 6000);
+      break;
+    }
     case 'comer': {
       const c = d.comida || CFG.comidas[0];
       S.b.fome = cl(S.b.fome + c.fome, 0, 100);
       S.b.corpo = cl(S.b.corpo + c.corpo, 0, 100);
       S.base.corpo = cl(S.base.corpo + c.base, 0, 100);
-      S.b.animo = cl(S.b.animo + c.animo, 0, 100);
+      // comer com fome sobe o ânimo bem mais do que comer sem fome
+      S.b.animo = cl(S.b.animo + c.animo + (S.b.fome < 45 ? 7 : 2), 0, 100);
       if(c.desp) S.despensa = cl(S.despensa - c.desp, 0, 100);
       if(c.custo){ S.dinheiro -= c.custo; ex(c.n, -c.custo); }
       break;
     }
     case 'insta': break;
-    case 'banho': S.b.higiene = cl(S.b.higiene+70,0,100); S.b.animo += 3; break;
+    case 'banho':
+      S.b.higiene = cl(S.b.higiene+70,0,100);
+      // banho de manhã acorda de verdade; à noite é só alívio
+      S.b.animo = cl(S.b.animo + (hDia() < 12 ? 11 : 6), 0, 100);
+      S.b.estresse = cl(S.b.estresse-4,0,100);
+      break;
     case 'correr':
       S.b.corpo = cl(S.b.corpo+7,0,100); S.base.corpo = cl(S.base.corpo+1.6,0,100);
       S.b.higiene = cl(S.b.higiene-25,0,100);
-      S.b.estresse = cl(S.b.estresse-8,0,100); S.base.estresse = cl(S.base.estresse-0.8,0,100);
-      S.b.animo = cl(S.b.animo+5,0,100);
+      S.b.estresse = cl(S.b.estresse-14,0,100); S.base.estresse = cl(S.base.estresse-0.8,0,100);
+      S.b.animo = cl(S.b.animo + (hDia() < 11 ? 16 : 11), 0, 100);
       S.correuHa = 0;
-      toast('Corrida feita. A cabeça limpa junto.','v'); break;
+      toast('Corrida feita. Ânimo em <b>'+Math.round(S.b.animo)+'</b> e a cabeça limpa.','v'); break;
     case 'mercado':
       S.despensa = 100; S.dinheiro -= CFG.mercado.custo; ex('Mercado', -CFG.mercado.custo);
       toast('Despensa cheia.','v'); break;
@@ -738,7 +755,6 @@ function avancar(dt){
   const dormindo = S.fazendo && S.fazendo.tipo === 'dormir';
   if(dormindo){
     b.energia = cl(b.energia + CFG.dormeEnergia*dt, 0, 100);
-    b.estresse = cl(b.estresse - 0.6*dt, 0, 100);
   } else {
     let de = CFG.decai.energia;
     if(b.corpo < 40) de *= 1.25;
@@ -746,10 +762,16 @@ function avancar(dt){
   }
 
   let da = CFG.decai.animo;
+  // o corpo cobra na hora: fome e sujeira derrubam o ânimo rápido
+  if(b.fome < 40) da -= 1.5;
+  if(b.fome < 20) da -= 2.5;
+  if(b.energia < 35) da -= 1.2;
   if(S.sujeira > 60) da -= 0.7;
-  if(b.higiene < 25) da -= 0.5;
+  if(b.higiene < 25) da -= 0.9;
   if(b.casamento < 30) da -= 0.8;
   if(b.estresse > 80) da -= 0.9;
+  // manhã é no tranco: antes de banho ou corrida, o ânimo cai mais
+  if(hDia() >= 6 && hDia() < 11 && b.higiene < 65) da -= 1.4;
   // fila cheia pesa: cada projeto além do terceiro, e cada atraso, derruba o ânimo
   const abertos = S.projetos.length;
   const atrasados = S.projetos.filter(p => S.t > p.prazo).length;
@@ -777,8 +799,15 @@ function avancar(dt){
     b[k] = cl(b[k] + (S.base[k] - b[k]) * CFG.puxaBasal * dt, 0, 100);
   });
 
-  // estresse contínuo por dívida
-  b.estresse = cl(b.estresse + (S.divida/5000)*(dt/24), 0, 100);
+  // estresse contínuo: dívida, trabalho e o corpo no limite
+  let de = (S.divida/2500)/24;
+  if(S.fazendo && ['projeto','chamado','reuniao','follow'].includes(S.fazendo.tipo)) de += 0.40;
+  if(S.chamados.length) de += 0.12*S.chamados.length;
+  if(S.projetos.some(p => S.t > p.prazo)) de += 0.5;
+  if(b.energia < 30) de += 0.35;
+  if(b.fome < 25) de += 0.3;
+  if(dormindo) de = -0.9;
+  b.estresse = cl(b.estresse + de*dt, 0, 100);
 
   // depressão
   if(b.animo < 10) S.animoBaixoH += dt; else S.animoBaixoH = Math.max(0, S.animoBaixoH - dt*2);
@@ -1039,13 +1068,13 @@ function porDia(d){
 
   // estresse por pendência
   let st = 0;
-  S.projetos.forEach(p => { if(S.t > p.prazo){ st += 2; p.atraso = true; } });
+  S.projetos.forEach(p => { if(S.t > p.prazo){ st += 4; p.atraso = true; } });
   S.chamados.forEach(c => {
     c.dias = (c.dias||0)+1;
     const horas = S.t - c.aberto;
-    st += horas > (c.prazo||48) ? 5 : 2;      // passou do prazo, dói mais
+    st += horas > (c.prazo||48) ? 8 : 3;      // passou do prazo, dói mais
   });
-  st += S.ra.abertas.length*5;
+  st += S.ra.abertas.length*7;
   S.b.estresse = cl(S.b.estresse + st, 0, 100);
 
   // clientes irritados reclamam
@@ -1402,9 +1431,10 @@ const cx = cv.getContext('2d');
 const W = 400, H = 660;
 let escala = 1, alturaLog = H, offY = 0;
 
+const PAINEL = 74;   // a faixa da direita é do painel; a casa não passa por baixo dele
 function ajustarCanvas(){
   const box = document.getElementById('v-casa');
-  const w = Math.round(box.getBoundingClientRect().width) || 400;
+  const w = Math.max(160, Math.round(box.getBoundingClientRect().width) - PAINEL) || 400;
   const hd = Math.round(box.getBoundingClientRect().height) || 660;
   escala = w/W;
   alturaLog = Math.max(H, hd/escala);
@@ -1461,7 +1491,10 @@ function mix(a,b,t){
 }
 function luzInterna(){
   const h = hDia();
-  return (h < 6.5 || h > 18.5) ? 1 : (h < 8 || h > 17 ? .4 : 0);
+  if(h < 5.8 || h > 19.4) return 1;        // noite fechada
+  if(h < 7.2 || h > 18.2) return .75;      // quase escuro
+  if(h < 8.4 || h > 17.2) return .38;      // fim de tarde
+  return 0;                                 // dia claro
 }
 
 function rr(x,y,w,h,r){
@@ -1498,32 +1531,35 @@ function desenharCasa(){
   cx.save();
   cx.translate(0, offY);
 
+  // à noite só o cômodo onde ele está fica aceso; o resto vira breu
+  const pBon = posBoneco();
+  const comodoDele = COMODOS.findIndex(c => pBon.y + offY - offY >= c.y0 - 10 && pBon.y <= c.y1 + 10);
+
   COMODOS.forEach((c, i) => {
     const hh = c.y1 - c.y0;
-    // parede
     fill('#F2E2C9', 14, c.y0, W-28, hh, 4);
-    // sombra suave no topo
     const g = cx.createLinearGradient(0, c.y0, 0, c.y0+50);
     g.addColorStop(0, 'rgba(0,0,0,.10)'); g.addColorStop(1, 'rgba(0,0,0,0)');
     cx.fillStyle = g; cx.fillRect(14, c.y0, W-28, 50);
-    // piso
     fill(i===2 ? '#CFE3E6' : '#C4854F', 14, c.piso, W-28, c.y1-c.piso, 0);
     fill('rgba(0,0,0,.13)', 14, c.piso, W-28, 3);
-    // rodapé
     fill('#E2CDAE', 14, c.piso-6, W-28, 6);
 
-    // luz de teto acesa
-    if(luz > 0){
-      const lg = cx.createRadialGradient(W/2, c.y0+10, 5, W/2, c.y0+10, 170);
-      lg.addColorStop(0, 'rgba(255,214,140,'+(0.30*luz)+')');
-      lg.addColorStop(1, 'rgba(255,214,140,0)');
+    const aceso = (i === comodoDele) && !(S.fazendo && S.fazendo.tipo === 'dormir');
+    if(luz > 0 && aceso){
+      const lg = cx.createRadialGradient(W/2, c.y0+10, 5, W/2, c.y0+10, 200);
+      lg.addColorStop(0, 'rgba(255,208,120,'+(0.42*luz)+')');
+      lg.addColorStop(1, 'rgba(255,208,120,0)');
       cx.fillStyle = lg; cx.fillRect(14, c.y0, W-28, hh);
-      fill('#FFD98A', W/2-11, c.y0+2, 22, 7, 3);
+      fill('#FFD98A', W/2-13, c.y0+2, 26, 8, 3);
+      cx.fillStyle = 'rgba(255,216,138,.35)';
+      cx.beginPath(); cx.moveTo(W/2-13, c.y0+10); cx.lineTo(W/2-70, c.piso); cx.lineTo(W/2+70, c.piso); cx.lineTo(W/2+13, c.y0+10); cx.fill();
     }
-    // etiqueta
     cx.fillStyle = 'rgba(70,48,28,.42)';
     cx.font = '700 9px Figtree, sans-serif';
     cx.fillText(c.n, 22, c.y0+16);
+    cx.__escurece = cx.__escurece || [];
+    if(luz > 0 && !aceso) cx.__escurece.push([c.y0, hh, luz]);
   });
 
   janela(250, 40, 96, 66, ceu);
@@ -1537,6 +1573,11 @@ function desenharCasa(){
   if(S.sujeira > 35) desenharSujeira();
   desenharBoneco();
   animacaoDaAcao();
+  // o breu vai por cima dos móveis dos cômodos apagados
+  (cx.__escurece||[]).forEach(([y0, hh, l]) => {
+    fill('rgba(14,22,46,'+(0.80*l)+')', 14, y0, W-28, hh, 4);
+  });
+  cx.__escurece = [];
   selo();
 
   // brilho do móvel tocado
@@ -1773,8 +1814,8 @@ function animacaoDaAcao(){
   const ic = ICONE_ACAO[f.tipo];
   if(ic){
     const by = y - 22 + Math.sin(bounce*1.5)*2.5;
-    const lado = (x > 250 ? -26 : (p.deitado ? 46 : 26));
-    const bx = cl(x + lado, 28, 262);
+    const lado = (x > 300 ? -26 : (p.deitado ? 46 : 26));
+    const bx = cl(x + lado, 28, 372);
     cx.fillStyle = 'rgba(30,39,64,.92)';
     cx.beginPath(); cx.arc(bx, by, 13, 0, 7); cx.fill();
     cx.strokeStyle = 'rgba(255,255,255,.16)'; cx.lineWidth = 1.5; cx.stroke();
@@ -1823,7 +1864,6 @@ function posBoneco(){
     correr:'porta', mercado:'porta', limpezaTania:'porta', insta:'sofa'};
   const id = f ? (mapa[f.tipo]||'mesaTrab') : 'mesaTrab';
   const m = MOVEIS.find(x => x.id === id) || MOVEIS[5];
-  // a faixa da direita é dos botões: o boneco e a animação ficam longe dela
   if(id === 'cama')     return {x:m.x+82, y:m.y+40, deitado:true};
   if(id === 'mesaTrab') return {x:m.x+m.w/2, y:MOVEIS[5].y+96};
   if(id === 'sofa')     return {x:m.x-14, y:m.y+42};
@@ -1926,7 +1966,10 @@ const VITAIS = [
   {k:'corpo',     ic:'💪', n:'Corpo'},
   {k:'casamento', ic:'❤️', n:'Casamento'},
   {k:'estresse',  ic:'😰', n:'Estresse', invertido:true},
+  {k:'despensa',  ic:'🧺', n:'Despensa', casa:true},
+  {k:'sujeira',   ic:'🧹', n:'Casa limpa', casa:true, invertido:true},
 ];
+const valorVital = k => (k === 'despensa' || k === 'sujeira') ? S[k] : S.b[k];
 // o que mexe em cada barra, com os numeros que o jogo usa de verdade
 const AJUDA = {
   energia: {
@@ -1984,6 +2027,20 @@ const AJUDA = {
     desce: [['Um dia comum', '−2,2 agora, −0,8 na base'], ['Trabalhar mais de 8h no dia', '−4 agora, −0,6 na base'],
             ['Não buscar ela', '−14'], ['Não ajudar na limpeza', '−12'], ['Faltar no aniversário', '−10']],
     baixo: 'Abaixo de 30 ela cobra, e a cobrança derruba seu ânimo 0,8 por hora. A base cai todo santo dia: café resolve o dia, não a base.',
+  },
+  despensa: {
+    onde: 'Botão Mercado, ou a porta de casa',
+    sobe: [['Ir ao mercado', 'enche até 100 por R$ 250']],
+    desce: [['Frango grelhado', '−12'], ['Marmita caseira', '−10'], ['Ovo com arroz', '−6'],
+            ['Café com pão', '−4'], ['Miojo', '−3']],
+    baixo: 'Vazia, você só tem delivery: caro, e derruba o corpo toda vez.',
+  },
+  sujeira: {
+    onde: 'Pia da cozinha, ou o botão Limpar',
+    sobe: [['Limpar a casa', 'zera em 1 hora']],
+    desce: [['O tempo passando', '+1,4 de sujeira por hora']],
+    baixo: 'Passando de 60 de sujeira, seu ânimo cai 0,7 a mais por hora. Passando de 92, você começa a limpar sozinho.',
+    invertido: true,
   },
   estresse: {
     onde: 'Corrida, TV e resolver o que está aberto',
@@ -2045,7 +2102,7 @@ function atualizarHud(){
 
   const vt = document.getElementById('vitais');
   const novo = VITAIS.map(v => {
-    const val = Math.round(S.b[v.k]), c = corVital(val, v.invertido);
+    const val = Math.round(valorVital(v.k)), c = corVital(val, v.invertido);
     const temBase = CFG.comBasal.includes(v.k);
     const bs = temBase ? Math.round(S.base[v.k]) : null;
     return `<button data-v="${v.k}" title="${v.n}"><i>${v.ic}</i><u style="color:${c}">${val}</u>` +
@@ -2057,7 +2114,8 @@ function atualizarHud(){
     vt.innerHTML = novo;
     vt.querySelectorAll('[data-v]').forEach(b => b.onclick = () => abrirVital(b.dataset.v));
   }
-  montarAcoes();
+  montarTarefas();
+  fundoCerto();
 
   const doing = document.getElementById('doing');
   if(S.fazendo){
@@ -2093,42 +2151,56 @@ function badge(aba, n){
   el.textContent = n;
 }
 
-/* ---------- coluna de ações ---------- */
-function acoesDisponiveis(){
-  const ate = (hDia() < 7 ? 7-hDia() : 31-hDia());
-  return [
-    {id:'mesa',    ic:'💼', n:'Mesa',    selo: pendencias(), destaque:true, faz: abrirMesa},
-    {id:'comer',   ic:'🍽️', n:'Comer',   faz: menuComida},
-    {id:'dormir',  ic:'🛏️', n:'Dormir',  faz: () => iniciar('dormir','Dormindo','até as 07:00', ate)},
-    {id:'banho',   ic:'🚿', n:'Banho',   faz: () => iniciar('banho','No banho','', .35)},
-    {id:'correr',  ic:'🏃', n:'Correr',  faz: () => iniciar('correr','Correndo na rua','', 1)},
-    {id:'insta',   ic:'📱', n:'Insta',   faz: () => iniciar('insta','Rolando o Instagram','15 minutos', CFG.insta.passo)},
-    {id:'tania',   ic:'❤️', n:'Tania',   faz: menuTania},
-    {id:'limpar',  ic:'🧹', n:'Limpar',  faz: () => iniciar('limpar','Limpando a casa','a sujeira volta sozinha', 1)},
-    {id:'tv',      ic:'📺', n:'TV',      faz: () => iniciar('tv','Vendo TV','descanso', 1)},
-    {id:'mercado', ic:'🛒', n:'Mercado', faz: () => iniciar('mercado','No mercado','', CFG.mercado.horas)},
-    {id:'curso',   ic:'🎓', n:'Curso',   trava: S.dinheiro < CFG.curso.custo,
-                   faz: () => iniciar('curso','Fazendo o curso','+10 de execução', CFG.curso.horas)},
-  ];
+/* ---------- o que falta fazer, na coluna da direita ---------- */
+function tarefasAgora(){
+  const t = [];
+
+  S.chamados.slice().sort((a,b) => (a.prazo-(S.t-a.aberto)) - (b.prazo-(S.t-b.aberto))).slice(0,2)
+    .forEach(c => {
+      const resta = (c.prazo||48) - (S.t - c.aberto);
+      t.push({ic:'🛠️', n:c.cliente.split(' ')[0], q: resta<=0 ? 'venceu' : Math.round(resta)+'h',
+              cor: resta<=0 ? 'urgente' : (resta<12 ? 'atencao' : ''), faz: abrirMesa});
+    });
+
+  S.projetos.slice().sort((a,b) => a.prazo-b.prazo).slice(0,2).forEach(p => {
+    const pronto = p.feitas >= p.horas;
+    const dias = (p.prazo - S.t)/24;
+    t.push({ic: pronto ? '📦' : '⌨️', n: pronto ? 'Entregar' : p.cliente.split(' ')[0],
+            q: pronto ? fmt(p.preco/2) : (dias<=0 ? 'atrasado' : Math.ceil(dias)+'d'),
+            cor: pronto ? 'ok' : (dias<=0 ? 'urgente' : (dias<2 ? 'atencao' : '')),
+            faz: abrirMesa});
+  });
+
+  const reu = S.leads.filter(l => l.st === 'marcada').sort((a,b)=>a.hReuniao-b.hReuniao)[0];
+  if(reu) t.push({ic:'🤝', n:'Reunião', q: diaRel(reu.hReuniao)+' '+hhmm(hDe(reu.hReuniao)),
+                  cor: S.t > reu.hReuniao ? 'atencao' : '', faz: abrirMesa});
+
+  const orc = S.leads.filter(l => l.st === 'orcar').length;
+  if(orc) t.push({ic:'📤', n:'Orçamento', q: orc+(orc>1?' leads':' lead'), cor:'atencao', faz: abrirMesa});
+
+  const pen = S.leads.filter(l => l.st === 'pensando').length;
+  if(pen) t.push({ic:'💬', n:'Cobrar', q: pen+' no zap', cor:'', faz: abrirMesa});
+
+  if(S.ra.abertas.length) t.push({ic:'⚠️', n:'Reclame Aqui', q:S.ra.abertas.length+' aberta', cor:'urgente', faz:()=>irPara('fama')});
+
+  return t.slice(0, 5);
 }
 
-function montarAcoes(){
-  const el = document.getElementById('acoes');
+function montarTarefas(){
+  const el = document.getElementById('tarefas');
   if(abaAtual !== 'casa'){ el.style.display = 'none'; return; }
   el.style.display = 'flex';
-  const lista = acoesDisponiveis();
-  const chave = lista.map(a => a.id + (a.selo||'') + (a.trava?'x':'')).join('|');
+  el.style.top = (document.getElementById('vitais').offsetHeight + 12) + 'px';
+  const lista = tarefasAgora();
+  const chave = lista.map(a => a.ic+a.n+a.q+a.cor).join('|') || 'vazio';
   if(el.dataset.hash === chave) return;
   el.dataset.hash = chave;
-  el.innerHTML = lista.map((a,i) =>
-    `<button data-a="${i}" class="${a.destaque?'destaque':''} ${a.trava?'travado':''}">
-       <span class="ai">${a.ic}</span><span class="an">${a.n}</span>
-       ${a.selo ? `<span class="selo">${a.selo}</span>` : ''}
-     </button>`).join('');
-  el.querySelectorAll('[data-a]').forEach(b => {
-    const a = lista[+b.dataset.a];
-    b.onclick = () => { if(a.trava) return toast('Falta dinheiro pra isso.','x'); a.faz(); };
-  });
+  el.innerHTML = '<div class="tsec">o que falta</div>' + (lista.length
+    ? lista.map((a,i) => `<button data-t="${i}" class="${a.cor}">
+        <span class="ti">${a.ic}</span><span class="tn">${a.n}</span>
+        <span class="tq" style="color:${a.cor==='urgente'?'var(--vermelho)':(a.cor==='atencao'?'var(--laranja)':(a.cor==='ok'?'var(--verde)':'var(--texto2)'))}">${a.q}</span></button>`).join('')
+    : '<div class="vazio2">nada agora</div>');
+  el.querySelectorAll('[data-t]').forEach(b => b.onclick = () => lista[+b.dataset.t].faz());
 }
 
 function menuComida(){
@@ -2481,7 +2553,7 @@ function cargaAgora(){
 function abrirVital(k){
   const v = VITAIS.find(x => x.k === k), a = AJUDA[k];
   if(!v || !a) return;
-  const val = Math.round(S.b[k]), c = corVital(val, v.invertido);
+  const val = Math.round(valorVital(k)), c = corVital(val, v.invertido);
   const ruim = v.invertido ? val > 85 : val < 30;
   const temBase = CFG.comBasal.includes(k);
   const bs = temBase ? Math.round(S.base[k]) : null;
@@ -2786,6 +2858,49 @@ function doer(qual){
   }
 }
 
+/* ---------- trilha de fundo: três climas bem diferentes ---------- */
+const TRILHAS = {
+  // parado: acordes longos, quase sem pulso. Dá pra perceber que nada acontece.
+  parado: {passo:1.30, vol:.030, tipo:'sine',
+    baixo:[110,0,98,0,87,0,98,0],
+    melo: [440,0,0,392,0,0,349,0]},
+  // ação: arpejo alegre andando, ritmo médio
+  acao: {passo:0.34, vol:.026, tipo:'triangle',
+    baixo:[131,0,131,0,175,0,147,0],
+    melo: [523,659,784,659,587,698,880,698]},
+  // trabalho: pulso seco e repetitivo, cabeça baixa
+  trabalho: {passo:0.30, vol:.020, tipo:'square',
+    baixo:[98,98,0,98,0,98,98,0],
+    melo: [294,0,349,0,294,0,262,0]},
+};
+let trilhaAtual = null, trilhaTimer = null, trilhaPasso = 0;
+
+function tocarTrilha(nome){
+  if(trilhaAtual === nome) return;
+  trilhaAtual = nome;
+  clearInterval(trilhaTimer); trilhaTimer = null; trilhaPasso = 0;
+  if(!nome || !somLigado) return;
+  const T = TRILHAS[nome];
+  const bater = () => {
+    if(!somLigado || !audio()) return;
+    const i = trilhaPasso % 8;
+    if(T.baixo[i]) nota(T.baixo[i], T.baixo[i], T.passo*.9, T.tipo, T.vol);
+    if(T.melo[i])  nota(T.melo[i],  T.melo[i],  T.passo*.7, 'sine', T.vol*.62);
+    trilhaPasso++;
+  };
+  bater();
+  trilhaTimer = setInterval(bater, T.passo*1000);
+}
+
+function fundoCerto(){
+  if(!somLigado) return tocarTrilha(null);
+  const f = S.fazendo;
+  if(!f) return tocarTrilha('parado');
+  if(['projeto','chamado','reuniao','follow','curso','avaliacao','responderRA'].includes(f.tipo))
+    return tocarTrilha('trabalho');
+  return tocarTrilha('acao');
+}
+
 function ligarSom(){
   const b = document.getElementById('btSom');
   b.textContent = somLigado ? '🔊' : '🔇';
@@ -2794,7 +2909,8 @@ function ligarSom(){
     somLigado = !somLigado;
     try{ localStorage.setItem(K_SOM, somLigado ? 'on' : 'off'); }catch(e){}
     ligarSom();
-    if(somLigado) som('bom');
+    if(somLigado){ som('bom'); trilhaAtual = null; fundoCerto(); }
+    else tocarTrilha(null);
   };
 }
 
