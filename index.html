@@ -1731,7 +1731,7 @@ function animacaoDaAcao(){
       });
       break;
     case 'insta':
-      sobem(x+12, y+10, 5, .55, (px,py,t,i) => {
+      sobem(x, y+10, 5, .55, (px,py,t,i) => {
         cx.fillStyle = i%2 ? 'rgba(224,122,155,.9)' : 'rgba(127,180,232,.9)';
         cx.beginPath(); cx.arc(px, py, 3.2-t, 0, 7); cx.fill();
       });
@@ -1772,12 +1772,14 @@ function animacaoDaAcao(){
   const ic = ICONE_ACAO[f.tipo];
   if(ic){
     const by = y - 22 + Math.sin(bounce*1.5)*2.5;
+    const lado = (x > 250 ? -26 : (p.deitado ? 46 : 26));
+    const bx = cl(x + lado, 28, 262);
     cx.fillStyle = 'rgba(30,39,64,.92)';
-    cx.beginPath(); cx.arc(x + (p.deitado ? 46 : 24), by, 13, 0, 7); cx.fill();
+    cx.beginPath(); cx.arc(bx, by, 13, 0, 7); cx.fill();
     cx.strokeStyle = 'rgba(255,255,255,.16)'; cx.lineWidth = 1.5; cx.stroke();
     cx.font = '14px "Apple Color Emoji","Segoe UI Emoji",sans-serif';
     cx.textAlign = 'center'; cx.textBaseline = 'middle';
-    cx.fillText(ic, x + (p.deitado ? 46 : 24), by + 1);
+    cx.fillText(ic, bx, by + 1);
     cx.textAlign = 'start'; cx.textBaseline = 'alphabetic';
   }
 }
@@ -1820,11 +1822,12 @@ function posBoneco(){
     correr:'porta', mercado:'porta', limpezaTania:'porta', insta:'sofa'};
   const id = f ? (mapa[f.tipo]||'mesaTrab') : 'mesaTrab';
   const m = MOVEIS.find(x => x.id === id) || MOVEIS[5];
+  // a faixa da direita é dos botões: o boneco e a animação ficam longe dela
   if(id === 'cama')     return {x:m.x+82, y:m.y+40, deitado:true};
   if(id === 'mesaTrab') return {x:m.x+m.w/2, y:MOVEIS[5].y+96};
-  if(id === 'sofa')     return {x:m.x+m.w/2, y:m.y+30};
+  if(id === 'sofa')     return {x:m.x-14, y:m.y+42};
   if(id === 'box')      return {x:m.x+m.w/2, y:m.y+112};
-  if(id === 'porta')    return {x:m.x+m.w/2, y:m.y+m.h-8, fora:true};
+  if(id === 'porta')    return {x:m.x-22, y:m.y+m.h-8, fora:true};
   return {x:m.x+m.w/2, y:m.y+m.h+4};
 }
 
