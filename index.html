@@ -209,8 +209,11 @@ h1,h2,h3{font-family:'Bricolage Grotesque',system-ui,sans-serif; margin:0; text-
 /* ---------- barra de ação em curso ---------- */
 #doing{
   flex:0 0 auto; display:none; padding:7px 12px; background:var(--carta2);
-  border-top:1px solid var(--linha); align-items:center; gap:9px;
+  border-bottom:1px solid var(--linha); align-items:center; gap:9px;
 }
+#doing.sozinho{background:rgba(142,107,217,.22); box-shadow:inset 3px 0 0 var(--roxo)}
+#doing.sozinho .stop{display:none}
+#doing.sozinho .prog i{background:var(--roxo)}
 #doing.on{display:flex}
 #doing .txt{flex:1; min-width:0}
 #doing .t1{font-size:12px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
@@ -391,6 +394,15 @@ input[type=email]{
     </div>
   </header>
 
+  <div id="doing">
+    <div class="txt">
+      <div class="t1" id="doTxt">—</div>
+      <div class="t2" id="doSub">—</div>
+      <div class="prog"><i id="doBar" style="width:0"></i></div>
+    </div>
+    <button class="stop" id="doStop">parar</button>
+  </div>
+
   <div id="views">
     <div id="vitais"></div>
     <div id="acoes"></div>
@@ -400,15 +412,6 @@ input[type=email]{
     <section class="view" id="v-zap"><div class="pad" id="zapBody"></div></section>
     <section class="view" id="v-grana"><div class="pad" id="granaBody"></div></section>
     <section class="view" id="v-fama"><div class="pad" id="famaBody"></div></section>
-  </div>
-
-  <div id="doing">
-    <div class="txt">
-      <div class="t1" id="doTxt">—</div>
-      <div class="t2" id="doSub">—</div>
-      <div class="prog"><i id="doBar" style="width:0"></i></div>
-    </div>
-    <button class="stop" id="doStop">parar</button>
   </div>
 
   <nav id="tabs"></nav>
@@ -631,7 +634,10 @@ function taxaAgiota(){
 
 /* ---------------- ações ---------------- */
 function ocupado(){ return !!S.fazendo; }
+const involuntario = () => !!(S.fazendo && S.fazendo.sozinho);
+
 function iniciar(tipo, label, sub, horas, dados){
+  if(involuntario()) return toast('Agora não dá. Espera isso passar.','x');
   if(ocupado()) return toast('Você já está no meio de outra coisa.','r');
   S.fazendo = {tipo, label, sub, ini:S.t, fim:S.t+horas, dados: dados||{}};
   som('toc');
@@ -640,6 +646,8 @@ function iniciar(tipo, label, sub, horas, dados){
 }
 function pararAcao(){
   if(!S.fazendo) return;
+  // o que o corpo e a cabeça começaram sozinhos, você não desliga no botão
+  if(S.fazendo.sozinho) return toast('Isso não para porque você quer. Vai passar sozinho.','x');
   const f = S.fazendo;
   S.fazendo = null;
   if(f.tipo === 'dormir') toast('Você levantou antes da hora.','x');
@@ -825,10 +833,37 @@ function porHora(d){
       toast('Passou da hora da reunião com <b>'+l.nome+'</b>. Ainda dá pra correr atrás hoje.','x');
     }
   });
-  if(h === 8 && !fds()) chegarChamado();
-  if(h === 15) chegarChamado();
+  if(h >= 8 && h <= 20 && (!fds() || Math.random() < 0.3)) chegarChamado();
+  autocuidado();
   vontadePropria();
   render(true);
+}
+
+// abaixo de certo ponto o corpo resolve sozinho, com ou sem a sua vontade
+function autocuidado(){
+  if(involuntario()) return;
+  const b = S.b;
+  const ate = (hDia() < 7 ? 7-hDia() : 31-hDia());
+  const rapida = CFG.comidas.find(c => c.id === (S.despensa >= 6 ? 'ovo' : 'doce'));
+  let a = null;
+
+  if(b.energia < 8)
+    a = {tipo:'dormir', label:'Apagou de cansaço', sub:'o corpo desligou', h:Math.min(ate, 9),
+         txt:'<b>Você apagou.</b> Não teve escolha, o corpo desligou.'};
+  else if(b.fome < 10)
+    a = {tipo:'comer', label:'Comeu qualquer coisa', sub:'a fome mandou', h:rapida.h, dados:{comida:rapida},
+         txt:'<b>A fome venceu.</b> Você foi na cozinha sem pensar e comeu o que tinha na mão.'};
+  else if(b.higiene < 10)
+    a = {tipo:'banho', label:'Foi tomar banho', sub:'não dava mais', h:.35,
+         txt:'<b>Não dava mais.</b> Você largou tudo e foi pro chuveiro.'};
+  else if(S.sujeira > 92)
+    a = {tipo:'limpar', label:'Começou a limpar', sub:'a bagunça incomodou', h:1,
+         txt:'<b>A bagunça passou do ponto.</b> Você começou a limpar sem decidir isso.'};
+
+  if(!a) return;
+  S.fazendo = {tipo:a.tipo, label:a.label, sub:a.sub, ini:S.t, fim:S.t+a.h, dados:a.dados||{}, sozinho:true};
+  toast(a.txt, 'x', 7500);
+  render();
 }
 
 // o personagem tem vontade própria: cabeça cansada foge do trabalho sozinha
@@ -848,7 +883,7 @@ function vontadePropria(){
   const r = Math.random();
   if(r < 0.62){
     const min = ri(20, 50);
-    S.fazendo = {tipo:'insta', label:'Rolando o Instagram', sub:'sem perceber', ini:S.t, fim:S.t + min/60, dados:{}, sozinho:true};
+    S.fazendo = {tipo:'insta', label:'Rolando o Instagram', sub:min+' minutos que você não escolheu', ini:S.t, fim:S.t + min/60, dados:{}, sozinho:true};
     toast(pick([
       '<b>Você abriu o Instagram sem pensar.</b> O código ficou pra trás.',
       '<b>Pegou o celular "só um minuto".</b> Já faz um tempo.',
@@ -858,9 +893,10 @@ function vontadePropria(){
     S.fazendo = {tipo:'comer', label:'Foi na cozinha beliscar', sub:'não era fome', ini:S.t, fim:S.t + .25, dados:{comida:CFG.comidas.find(c=>c.id==='doce')}, sozinho:true};
     toast('<b>Levantou pra beliscar.</b> Não era fome, era cansaço.', 'x', 6000);
   } else {
-    S.fazendo = null;
+    const min = ri(10, 25);
+    S.fazendo = {tipo:'parado', label:'Parou de trabalhar', sub:'olhando pra parede', ini:S.t, fim:S.t + min/60, dados:{}, sozinho:true};
     S.b.animo = cl(S.b.animo - 3, 0, 100);
-    toast('<b>Você parou.</b> Ficou olhando pra parede uns minutos.', 'x', 6000);
+    toast('<b>Você travou olhando pra parede.</b> '+min+' minutos que não voltam.', 'x', 6000);
   }
   render();
 }
@@ -913,21 +949,50 @@ function diaRel(h){
   return DIAS[d2.getDay()];
 }
 
+// cada sistema entregue traz de 3 a 10 chamados nos primeiros 30 dias.
+// depois disso cai muito, mas cliente chato nunca para de pedir.
+const PACIENCIA = {A:72, B:48, C:24};   // horas até ele reclamar
+const CHAMADOS_TXT = ['Erro ao salvar um cadastro.','O relatório saiu com número errado.',
+  'Não consegue logar.','Pediu um campo novo na tela.','A tela trava no celular.',
+  'Quer mudar a ordem das colunas.','O filtro não traz o mês certo.','Sumiu um registro, diz ele.',
+  'Quer exportar pro Excel.','A senha do funcionário novo não funciona.'];
+
 function chegarChamado(){
-  const n = S.entregues.length;
-  if(!n) return;
-  let chance = 0;
-  S.entregues.forEach(c => chance += 0.045*CFG.classes[c.classe].sup);
-  if(Math.random() > Math.min(chance, .55)) return;
-  const cli = pick(S.entregues);
-  const grande = Math.random() < 0.18;
-  const c = {
-    id: S.seq++, cliente: cli.cliente, classe: cli.classe, refId: cli.id,
-    horas: grande ? rnd(4,8) : rnd(0.5,2), feitas:0, aberto:S.t, grande,
-    desc: grande ? 'Deu problemão. Parou tudo do lado dele.' : pick(['Erro ao salvar um cadastro.','O relatório saiu com número errado.','Não consegue logar.','Pediu um campo novo na tela.','A tela trava no celular.']),
-  };
-  S.chamados.push(c);
-  toast((grande?'<b>PROBLEMÃO</b> no ':'Chamado de ')+'<b>'+c.cliente+'</b>: '+c.desc, grande?'r':'x');
+  if(!S.entregues.length) return;
+  S.entregues.forEach(cli => {
+    if(cli.cota == null){
+      cli.cota = ri(3, 10);
+      cli.nascido = cli.quando;
+      cli.paciencia = PACIENCIA[cli.classe] || 48;
+      if(cli.classe === 'C') cli.cota += 4;   // o chato pede mais
+    }
+    const dias = (S.t - cli.nascido)/24;
+    const jaAberto = S.chamados.some(c => c.refId === cli.id);
+    if(jaAberto) return;
+
+    let p;
+    if(dias <= 30){
+      if(cli.cota <= 0) return;
+      p = (cli.cota / 30) / 10;                       // espalha a cota pelos 30 dias
+    } else {
+      // depois do primeiro mês só os teimosos continuam
+      p = 0.0025 * CFG.classes[cli.classe].sup;
+      if(cli.classe === 'A') p *= 0.4;
+    }
+    if(Math.random() > p) return;
+
+    const grande = Math.random() < (dias <= 10 ? 0.22 : 0.12);
+    S.chamados.push({
+      id: S.seq++, cliente: cli.cliente, classe: cli.classe, refId: cli.id,
+      horas: grande ? rnd(4,8) : rnd(0.5,2), feitas:0, aberto:S.t, grande, dias:0,
+      prazo: cli.paciencia,
+      desc: grande ? 'Deu problemão. Parou tudo do lado dele.' : pick(CHAMADOS_TXT),
+    });
+    if(dias <= 30) cli.cota--;
+    const c = S.chamados[S.chamados.length-1];
+    toast((grande?'<b>PROBLEMÃO</b> no ':'Chamado de ')+'<b>'+c.cliente+'</b>: '+c.desc+
+      ' <span style="color:var(--texto3)">' + Math.round(c.prazo) + 'h pra responder</span>', grande?'r':'x');
+  });
 }
 
 /* ---------------- por dia ---------------- */
@@ -975,13 +1040,32 @@ function porDia(d){
   // estresse por pendência
   let st = 0;
   S.projetos.forEach(p => { if(S.t > p.prazo){ st += 2; p.atraso = true; } });
-  S.chamados.forEach(c => { c.dias = (c.dias||0)+1; if(c.dias >= 1) st += 3; });
+  S.chamados.forEach(c => {
+    c.dias = (c.dias||0)+1;
+    const horas = S.t - c.aberto;
+    st += horas > (c.prazo||48) ? 5 : 2;      // passou do prazo, dói mais
+  });
   st += S.ra.abertas.length*5;
   S.b.estresse = cl(S.b.estresse + st, 0, 100);
 
   // clientes irritados reclamam
   S.projetos.forEach(p => { if(p.atraso && Math.random() < .22) reclamar(p.cliente, 'atrasou a entrega'); });
-  S.chamados.forEach(c => { if(c.dias >= 3 && !c.reclamou && Math.random() < .4){ c.reclamou = true; reclamar(c.cliente, 'ficou dias sem resposta no suporte'); } });
+  S.chamados.forEach(c => {
+    const horas = S.t - c.aberto, prazo = c.prazo || 48;
+    if(horas <= prazo || c.reclamou) return;
+    const chance = c.classe === 'C' ? .55 : (c.classe === 'A' ? .18 : .35);
+    if(Math.random() < chance){
+      c.reclamou = true;
+      reclamar(c.cliente, 'passou de '+Math.round(prazo)+' horas sem resposta no suporte');
+    }
+    // cansou de esperar: pede menos daqui pra frente, e some com a satisfação
+    if(horas > prazo*2 && !c.desistiu){
+      c.desistiu = true;
+      const cli = S.entregues.find(x => x.id === c.refId);
+      if(cli){ cli.cota = Math.max(0, (cli.cota||0) - 2); cli.satisfacao = cl(cli.satisfacao - 18, 0, 100); }
+      toast('<b>'+c.cliente+'</b> parou de cobrar. Vai pedir menos daqui pra frente, e não é elogio.','x', 7000);
+    }
+  });
 
   // leads velhos morrem
   S.leads = S.leads.filter(l => {
@@ -1451,6 +1535,7 @@ function desenharCasa(){
 
   if(S.sujeira > 35) desenharSujeira();
   desenharBoneco();
+  animacaoDaAcao();
   selo();
 
   // brilho do móvel tocado
@@ -1582,6 +1667,121 @@ function portaSaida(){
   fill('#7A4C2B', m.x+7, m.y+52, m.w-14, 44, 2);
   fill('#F2A03D', m.x+m.w-13, m.y+m.h/2, 6, 6, 3);
 }
+/* ---------- o que está acontecendo, desenhado ---------- */
+const ICONE_ACAO = {
+  dormir:'💤', comer:'🍽️', banho:'🚿', correr:'🏃', mercado:'🛒', limpar:'🧹', tv:'📺',
+  tania:'❤️', limpezaTania:'🧽', curso:'🎓', insta:'📱', parado:'😶',
+  projeto:'⌨️', chamado:'🛠️', reuniao:'🤝', follow:'💬', avaliacao:'⭐', responderRA:'✍️',
+};
+
+// partículas que sobem, com o desenho passado como função
+function sobem(x, y, n, periodo, desenho){
+  for(let i=0;i<n;i++){
+    const t = (bounce*periodo + i/n) % 1;
+    const px = x + Math.sin((bounce + i*2.1)*1.6) * 9;
+    const py = y - t*46;
+    cx.globalAlpha = (1 - t) * .85;
+    desenho(px, py, t, i);
+  }
+  cx.globalAlpha = 1;
+}
+
+function animacaoDaAcao(){
+  const f = S.fazendo;
+  if(!f) return;
+  const p = posBoneco();
+  const x = p.x, y = p.y - (p.deitado ? 0 : 62);
+
+  switch(f.tipo){
+    case 'banho':
+      sobem(x, y+8, 6, .5, (px,py,t) => {
+        cx.fillStyle = 'rgba(220,240,250,.9)';
+        cx.beginPath(); cx.arc(px, py, 3 + t*3, 0, 7); cx.fill();
+      });
+      break;
+    case 'comer':
+      sobem(x, y+4, 4, .35, (px,py) => {
+        cx.strokeStyle = 'rgba(255,255,255,.6)'; cx.lineWidth = 2;
+        cx.beginPath(); cx.moveTo(px, py); cx.quadraticCurveTo(px+5, py-7, px, py-13); cx.stroke();
+      });
+      break;
+    case 'limpar': case 'limpezaTania':
+      sobem(x, y+14, 7, .7, (px,py,t) => {
+        cx.fillStyle = 'rgba(190,180,160,.75)';
+        cx.beginPath(); cx.ellipse(px, py, 4-t*2, 2.5-t, 0, 0, 7); cx.fill();
+      });
+      break;
+    case 'correr':
+      for(let i=0;i<3;i++){
+        const t = (bounce*1.4 + i/3) % 1;
+        cx.globalAlpha = (1-t)*.7; cx.strokeStyle = '#EFE3D0'; cx.lineWidth = 2.4;
+        cx.beginPath(); cx.moveTo(x-16-t*20, y+34); cx.lineTo(x-30-t*20, y+34); cx.stroke();
+      }
+      cx.globalAlpha = 1;
+      break;
+    case 'tania':
+      sobem(x, y, 4, .4, (px,py,t) => {
+        const s = 5 - t*2;
+        cx.fillStyle = 'rgba(224,122,155,.95)';
+        cx.beginPath();
+        cx.moveTo(px, py+s*.6);
+        cx.bezierCurveTo(px-s, py-s*.4, px-s*.5, py-s*1.3, px, py-s*.5);
+        cx.bezierCurveTo(px+s*.5, py-s*1.3, px+s, py-s*.4, px, py+s*.6);
+        cx.fill();
+      });
+      break;
+    case 'insta':
+      sobem(x+12, y+10, 5, .55, (px,py,t,i) => {
+        cx.fillStyle = i%2 ? 'rgba(224,122,155,.9)' : 'rgba(127,180,232,.9)';
+        cx.beginPath(); cx.arc(px, py, 3.2-t, 0, 7); cx.fill();
+      });
+      break;
+    case 'tv': case 'parado':
+      sobem(x, y+2, 3, .3, (px,py) => {
+        cx.fillStyle = 'rgba(160,175,205,.7)';
+        cx.beginPath(); cx.arc(px, py, 2.6, 0, 7); cx.fill();
+      });
+      break;
+    case 'projeto': case 'chamado': case 'curso': case 'responderRA':
+      for(let i=0;i<4;i++){
+        const t = (bounce*.9 + i/4) % 1;
+        cx.globalAlpha = (1-t)*.8;
+        cx.fillStyle = ['#7FD4A8','#F2A03D','#7FB3E8','#E07A9B'][i];
+        cx.fillRect(x - 14 + i*8, y + 6 - t*34, 5, 2.5);
+      }
+      cx.globalAlpha = 1;
+      break;
+    case 'reuniao': case 'follow':
+      sobem(x, y, 3, .45, (px,py,t) => {
+        cx.fillStyle = 'rgba(240,244,250,.92)';
+        rr(px-7, py-6, 15, 10, 4); cx.fill();
+        cx.fillStyle = 'rgba(60,70,95,.9)';
+        for(let k=0;k<3;k++) cx.fillRect(px-4+k*4, py-1.5, 2, 2);
+      });
+      break;
+    case 'mercado':
+      sobem(x, y+6, 3, .35, (px,py) => {
+        cx.fillStyle = 'rgba(242,160,61,.9)';
+        cx.fillRect(px-4, py-4, 8, 8);
+      });
+      break;
+    case 'dormir': break; // o zZ do boneco já conta a história
+  }
+
+  // bolha com o ícone da ação, pairando
+  const ic = ICONE_ACAO[f.tipo];
+  if(ic){
+    const by = y - 22 + Math.sin(bounce*1.5)*2.5;
+    cx.fillStyle = 'rgba(30,39,64,.92)';
+    cx.beginPath(); cx.arc(x + (p.deitado ? 46 : 24), by, 13, 0, 7); cx.fill();
+    cx.strokeStyle = 'rgba(255,255,255,.16)'; cx.lineWidth = 1.5; cx.stroke();
+    cx.font = '14px "Apple Color Emoji","Segoe UI Emoji",sans-serif';
+    cx.textAlign = 'center'; cx.textBaseline = 'middle';
+    cx.fillText(ic, x + (p.deitado ? 46 : 24), by + 1);
+    cx.textAlign = 'start'; cx.textBaseline = 'alphabetic';
+  }
+}
+
 // selo de pendencia em cima da mesa de trabalho
 function selo(){
   const n = pendencias();
@@ -1859,7 +2059,8 @@ function atualizarHud(){
   if(S.fazendo){
     const f = S.fazendo;
     doing.classList.add('on');
-    document.getElementById('doTxt').textContent = f.label;
+    doing.classList.toggle('sozinho', !!f.sozinho);
+    document.getElementById('doTxt').textContent = (f.sozinho ? '⚠ ' : '') + f.label;
     let pct, sub;
     if(f.tipo === 'projeto'){
       const p = S.projetos.find(x=>x.id===f.dados.id);
@@ -1877,7 +2078,7 @@ function atualizarHud(){
     document.getElementById('doBar').style.width = cl(pct,0,100)+'%';
   } else doing.classList.remove('on');
   // as mensagens ficam embaixo, sem cobrir o menu nem a barra da acao em curso
-  document.getElementById('toasts').style.bottom = (S.fazendo ? 116 : 64) + 'px';
+  document.getElementById('toasts').style.bottom = '64px';
 
   badge('fama', S.ra.abertas.length);
 }
@@ -2075,10 +2276,13 @@ function renderMesa(){
   if(S.chamados.length){
     h += `<div class="secTit">Suporte <span class="n">${S.chamados.length}</span></div>`;
     S.chamados.forEach(c => {
-      h += `<div class="card ${c.grande||c.dias>=2?'bad':'warn'}"><div class="cardTop"><h3>${c.cliente}</h3>
-        <span class="pill ${c.grande?'r':'o'}">${c.grande?'problemão':'chamado'}</span></div>
-        <div class="meta">${c.desc} · ${dur(c.horas-c.feitas)}${c.dias?' · aberto há '+c.dias+'d':''}</div>
-        ${c.dias>=2?'<div class="meta" style="color:var(--vermelho)">Mais um dia e ele reclama.</div>':''}
+      const horas = S.t - c.aberto, prazo = c.prazo || 48, resta = prazo - horas;
+      const estourou = resta <= 0;
+      h += `<div class="card ${c.grande||estourou?'bad':'warn'}"><div class="cardTop"><h3>${c.cliente}</h3>
+        <span class="pill ${estourou?'r':(resta<12?'o':'')}">${estourou ? 'passou do prazo' : 'faltam '+Math.round(resta)+'h'}</span></div>
+        <div class="meta">${c.desc} · ${dur(c.horas-c.feitas)} de trabalho${c.grande?' · <b style="color:var(--vermelho)">problemão</b>':''}</div>
+        <div class="meta" style="color:var(--texto3)">Aberto há ${Math.round(horas)}h · esse cliente espera ${Math.round(prazo)}h${c.classe==='C'?' e reclama fácil':''}</div>
+        ${estourou?'<div class="meta" style="color:var(--vermelho)">Já passou. Cada dia agora são 5 de estresse, e ele pode ir pro Reclame Aqui.</div>':''}
         <div class="acts"><button class="btn pri" data-cha="${c.id}">Resolver</button></div></div>`;
     });
   }
