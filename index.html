@@ -328,8 +328,9 @@ input[type=range]{width:100%; accent-color:var(--laranja)}
 label.f{display:block; font-size:11px; text-transform:uppercase; letter-spacing:.8px; color:var(--texto3); font-weight:700; margin:12px 0 5px}
 
 /* ---------- toast ---------- */
+/* as mensagens ficam dentro da casa, nunca por cima do painel da direita */
 #toasts{
-  position:absolute; left:8px; right:8px; bottom:8px; top:auto; z-index:55;
+  position:absolute; left:8px; right:82px; bottom:8px; top:auto; z-index:55;
   display:flex; flex-direction:column-reverse; gap:6px; pointer-events:none;
 }
 .toast{
@@ -1483,7 +1484,7 @@ function ex(desc, v, divida){
 const cv = document.getElementById('house');
 const cx = cv.getContext('2d');
 const W = 400, H = 660;
-let escala = 1, alturaLog = H, offY = 0;
+let escala = 1, escalaY = 1;
 
 const PAINEL = 74;   // a faixa da direita é do painel; a casa não passa por baixo dele
 function ajustarCanvas(){
@@ -1491,23 +1492,24 @@ function ajustarCanvas(){
   const w = Math.max(160, Math.round(box.getBoundingClientRect().width) - PAINEL) || 400;
   const hd = Math.round(box.getBoundingClientRect().height) || 660;
   escala = w/W;
-  alturaLog = Math.max(H, hd/escala);
-  offY = (alturaLog - H)/2;
+  // a casa se estica pra encher a tela; a distorção fica presa num limite discreto
+  escalaY = cl(hd/H, escala*0.78, escala*1.5);
   const dpr = Math.min(window.devicePixelRatio||1, 2.5);
-  cv.width = Math.round(W*escala*dpr); cv.height = Math.round(alturaLog*escala*dpr);
+  cv.width = Math.round(W*escala*dpr); cv.height = Math.round(H*escalaY*dpr);
   cv.style.width = w+'px';
-  cv.style.height = (alturaLog*escala)+'px';
-  cx.setTransform(escala*dpr, 0, 0, escala*dpr, 0, 0);
+  cv.style.height = (H*escalaY)+'px';
+  cx.setTransform(escala*dpr, 0, 0, escalaY*dpr, 0, 0);
 }
 if(window.ResizeObserver){
   new ResizeObserver(() => { if(abaAtual === 'casa') ajustarCanvas(); })
     .observe(document.getElementById('v-casa'));
 }
 
+// a casa ocupa a tela inteira: nada de moldura azul em volta
 const COMODOS = [
-  {n:'COZINHA', y0:8,   y1:222, piso:212},
+  {n:'COZINHA', y0:0,   y1:222, piso:212},
   {n:'SALA / QUARTO', y0:222, y1:452, piso:442},
-  {n:'BANHEIRO', y0:452, y1:652, piso:642},
+  {n:'BANHEIRO', y0:452, y1:660, piso:646},
 ];
 const MOVEIS = [
   {id:'geladeira', c:0, x:26,  y:104, w:52,  h:108, lab:'Geladeira'},
@@ -1517,10 +1519,10 @@ const MOVEIS = [
   {id:'cama',      c:1, x:24,  y:352, w:136, h:90,  lab:'Cama'},
   {id:'mesaTrab',  c:1, x:176, y:340, w:112, h:102, lab:'Mesa de trabalho'},
   {id:'sofa',      c:1, x:300, y:380, w:76,  h:62,  lab:'Sofá e TV'},
-  {id:'box',       c:2, x:26,  y:498, w:112, h:144, lab:'Chuveiro'},
-  {id:'piaBan',    c:2, x:156, y:562, w:72,  h:80,  lab:'Pia'},
-  {id:'vaso',      c:2, x:250, y:566, w:56,  h:76,  lab:'Vaso'},
-  {id:'porta',     c:2, x:330, y:534, w:52,  h:108, lab:'Sair de casa'},
+  {id:'box',       c:2, x:20,  y:500, w:112, h:146, lab:'Chuveiro'},
+  {id:'piaBan',    c:2, x:150, y:566, w:72,  h:80,  lab:'Pia'},
+  {id:'vaso',      c:2, x:244, y:570, w:56,  h:76,  lab:'Vaso'},
+  {id:'porta',     c:2, x:328, y:536, w:56,  h:110, lab:'Sair de casa'},
 ];
 
 function corCeu(){
@@ -1570,20 +1572,16 @@ function desenharCasa(){
   cx.setTransform(1,0,0,1,0,0);
   cx.clearRect(0,0,cv.width,cv.height);
   const dpr = Math.min(window.devicePixelRatio||1, 2.5);
-  cx.setTransform(escala*dpr, 0, 0, escala*dpr, 0, 0);
-  fill(ceu, 0, 0, W, alturaLog);
+  cx.setTransform(escala*dpr, 0, 0, escalaY*dpr, 0, 0);
+  fill(ceu, 0, 0, W, H);
 
   // estrelas de madrugada
   const h = hDia();
   if(h < 5.5 || h > 20){
     cx.fillStyle = 'rgba(255,255,255,.55)';
-    for(let i=0;i<34;i++){
-      const sx = (i*97)%W, sy = (i*53)%Math.round(alturaLog);
-      cx.fillRect(sx, sy, 1.6, 1.6);
-    }
+    for(let i=0;i<34;i++) cx.fillRect((i*97)%W, (i*53)%H, 1.6, 1.6);
   }
   cx.save();
-  cx.translate(0, offY);
 
   // à noite só o cômodo onde ele está fica aceso; o resto vira breu
   const pBon = posBoneco();
@@ -1591,27 +1589,27 @@ function desenharCasa(){
 
   COMODOS.forEach((c, i) => {
     const hh = c.y1 - c.y0;
-    fill('#F2E2C9', 14, c.y0, W-28, hh, 4);
+    fill('#F2E2C9', 0, c.y0, W, hh, 0);
     const g = cx.createLinearGradient(0, c.y0, 0, c.y0+50);
     g.addColorStop(0, 'rgba(0,0,0,.10)'); g.addColorStop(1, 'rgba(0,0,0,0)');
-    cx.fillStyle = g; cx.fillRect(14, c.y0, W-28, 50);
-    fill(i===2 ? '#CFE3E6' : '#C4854F', 14, c.piso, W-28, c.y1-c.piso, 0);
-    fill('rgba(0,0,0,.13)', 14, c.piso, W-28, 3);
-    fill('#E2CDAE', 14, c.piso-6, W-28, 6);
+    cx.fillStyle = g; cx.fillRect(0, c.y0, W, 50);
+    fill(i===2 ? '#CFE3E6' : '#C4854F', 0, c.piso, W, c.y1-c.piso, 0);
+    fill('rgba(0,0,0,.13)', 0, c.piso, W, 3);
+    fill('#E2CDAE', 0, c.piso-6, W, 6);
 
     const aceso = (i === comodoDele) && !(S.fazendo && S.fazendo.tipo === 'dormir');
     if(luz > 0 && aceso){
       const lg = cx.createRadialGradient(W/2, c.y0+10, 5, W/2, c.y0+10, 200);
       lg.addColorStop(0, 'rgba(255,208,120,'+(0.42*luz)+')');
       lg.addColorStop(1, 'rgba(255,208,120,0)');
-      cx.fillStyle = lg; cx.fillRect(14, c.y0, W-28, hh);
+      cx.fillStyle = lg; cx.fillRect(0, c.y0, W, hh);
       fill('#FFD98A', W/2-13, c.y0+2, 26, 8, 3);
       cx.fillStyle = 'rgba(255,216,138,.35)';
       cx.beginPath(); cx.moveTo(W/2-13, c.y0+10); cx.lineTo(W/2-70, c.piso); cx.lineTo(W/2+70, c.piso); cx.lineTo(W/2+13, c.y0+10); cx.fill();
     }
     cx.fillStyle = 'rgba(70,48,28,.42)';
     cx.font = '700 9px Figtree, sans-serif';
-    cx.fillText(c.n, 22, c.y0+16);
+    cx.fillText(c.n, 10, c.y0+15);
     cx.__escurece = cx.__escurece || [];
     if(luz > 0 && !aceso) cx.__escurece.push([c.y0, hh, luz]);
   });
@@ -1629,7 +1627,7 @@ function desenharCasa(){
   animacaoDaAcao();
   // o breu vai por cima dos móveis dos cômodos apagados
   (cx.__escurece||[]).forEach(([y0, hh, l]) => {
-    fill('rgba(14,22,46,'+(0.80*l)+')', 14, y0, W-28, hh, 4);
+    fill('rgba(14,22,46,'+(0.80*l)+')', 0, y0, W, hh, 0);
   });
   cx.__escurece = [];
   selo();
@@ -1981,7 +1979,7 @@ function desenharBoneco(){
 let tocado = null;
 cv.addEventListener('click', e => {
   const r = cv.getBoundingClientRect();
-  const x = (e.clientX - r.left)/escala, y = (e.clientY - r.top)/escala - offY;
+  const x = (e.clientX - r.left)/escala, y = (e.clientY - r.top)/escalaY;
   const m = MOVEIS.find(o => x >= o.x-6 && x <= o.x+o.w+6 && y >= o.y-6 && y <= o.y+o.h+6);
   if(!m) return;
   tocado = {id:m.id, until: performance.now()+400};
