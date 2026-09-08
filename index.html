@@ -56,12 +56,19 @@ h1,h2,h3{font-family:'Bricolage Grotesque',system-ui,sans-serif; margin:0; text-
 }
 .clock .hora{font-family:'Bricolage Grotesque'; font-weight:800; font-size:21px; letter-spacing:-.5px}
 .clock .data{font-size:11px; color:var(--texto2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
-.spd{display:flex; gap:3px; align-items:center; background:var(--carta); border-radius:9px; padding:3px}
-.spd button{
-  font-size:10px; font-weight:700; padding:3px 5px; border-radius:6px; color:var(--texto3);
-  font-family:'DM Mono',monospace; min-width:26px;
+/* velocidade: coluna própria, colada embaixo à direita, no tamanho do polegar */
+.spd{
+  position:absolute; right:5px; bottom:6px; z-index:21;
+  display:flex; flex-direction:column-reverse; gap:3px; width:66px;
 }
-.spd button.on{background:var(--laranja); color:#231603}
+.spd button{
+  height:33px; border-radius:9px; color:var(--texto2);
+  font-family:'DM Mono',monospace; font-size:13px; font-weight:500;
+  background:rgba(35,46,74,.93); box-shadow:0 2px 8px rgba(6,10,20,.5);
+  backdrop-filter:blur(3px); display:flex; align-items:center; justify-content:center;
+}
+.spd button:active{transform:scale(.93)}
+.spd button.on{background:var(--laranja); color:#231603; font-weight:700}
 #btSom{font-size:15px; padding:3px 4px; border-radius:8px; background:var(--carta); line-height:1}
 #btSom.mudo{opacity:.35}
 
@@ -101,9 +108,9 @@ h1,h2,h3{font-family:'Bricolage Grotesque',system-ui,sans-serif; margin:0; text-
   display:flex; flex-direction:column; gap:3px; width:66px;
 }
 #vitais button{
-  background:rgba(35,46,74,.90); border-radius:9px; padding:4px 5px;
-  display:grid; grid-template-columns:15px 1fr; grid-template-rows:auto 4px;
-  gap:0 5px; align-items:center; backdrop-filter:blur(3px);
+  background:rgba(35,46,74,.90); border-radius:8px; padding:2px 5px 3px;
+  display:grid; grid-template-columns:14px 1fr; grid-template-rows:auto 3px;
+  gap:0 4px; align-items:center; backdrop-filter:blur(3px);
   box-shadow:0 2px 8px rgba(6,10,20,.4);
 }
 #vitais button:active{transform:scale(.94)}
@@ -134,8 +141,8 @@ h1,h2,h3{font-family:'Bricolage Grotesque',system-ui,sans-serif; margin:0; text-
   text-shadow:0 1px 3px rgba(6,10,20,.9);
 }
 #tarefas button{
-  background:rgba(35,46,74,.93); border-radius:10px; padding:5px 4px 6px;
-  display:flex; flex-direction:column; align-items:center; gap:1px;
+  background:rgba(35,46,74,.93); border-radius:10px; padding:4px 4px 5px;
+  display:flex; flex-direction:column; align-items:center; gap:0;
   box-shadow:0 2px 9px rgba(6,10,20,.5); border-left:3px solid var(--linha);
   backdrop-filter:blur(3px);
 }
@@ -385,7 +392,6 @@ input[type=email]{
         <div class="hora mono" id="hHora">07:00</div>
         <div class="data" id="hData">seg, 2 de março</div>
       </div>
-      <div class="spd" id="spd"></div>
       <button id="btSom" aria-label="Som">🔊</button>
     </div>
     <div class="hudBot">
@@ -407,6 +413,7 @@ input[type=email]{
   <div id="views">
     <div id="vitais"></div>
     <div id="tarefas"></div>
+    <div class="spd" id="spd"></div>
     <section class="view on" id="v-casa">
       <div id="houseWrap"><canvas id="house"></canvas></div>
     </section>
@@ -442,6 +449,7 @@ input[type=email]{
 const CFG = {
   msPorHora: 40000,
   vels: [0, 0.25, 0.5, 1, 2, 4],
+  // o CSS usa column-reverse: o ⏸ fica embaixo, na altura do polegar
   velLabels: ['⏸','¼','½','1x','2x','4x'],
 
   diaContas: 5,
@@ -637,10 +645,64 @@ function taxaAgiota(){
 function ocupado(){ return !!S.fazendo; }
 const involuntario = () => !!(S.fazendo && S.fazendo.sozinho);
 
+/* Ação que rende ao longo do tempo, não só no fim.
+   Comer 40 minutos sobe a fome aos poucos: aos 20 minutos metade já entrou.
+   Sem isso o jogo achava que você ainda estava faminto no meio da refeição. */
+const CONTINUAS = ['comer','banho','correr','mercado','limpar','tv','tania','limpezaTania'];
+
+function totaisDaAcao(tipo, d){
+  const h = hDia();
+  switch(tipo){
+    case 'comer': {
+      const c = (d && d.comida) || CFG.comidas[0];
+      return {fome:c.fome, corpo:c.corpo, baseCorpo:c.base,
+              animo:c.animo + (S.b.fome < 45 ? 7 : 2),
+              despensa:-(c.desp||0), dinheiro:-(c.custo||0), rotulo:c.n};
+    }
+    case 'banho':   return {higiene:70, animo:(h<12?11:6), estresse:-4};
+    case 'correr':  return {corpo:7, baseCorpo:1.6, higiene:-25, estresse:-14,
+                            baseEstresse:-0.8, animo:(h<11?16:11)};
+    case 'mercado': return {despensa:100-S.despensa, dinheiro:-CFG.mercado.custo, rotulo:'Mercado'};
+    case 'limpar':  return {sujeira:-S.sujeira, animo:4};
+    case 'tv':      return {animo:9, estresse:-4};
+    case 'tania':   return {casamento:(d&&d.grande?12:6), baseCasamento:(d&&d.grande?2:1),
+                            estresse:-10, animo:6};
+    case 'limpezaTania': return {casamento:10, baseCasamento:3, energia:-30};
+    default: return {};
+  }
+}
+
+const ALVO = {fome:['b','fome'], corpo:['b','corpo'], animo:['b','animo'], higiene:['b','higiene'],
+  estresse:['b','estresse'], casamento:['b','casamento'], energia:['b','energia'],
+  baseCorpo:['base','corpo'], baseEstresse:['base','estresse'], baseCasamento:['base','casamento']};
+
+// aplica a fatia do efeito correspondente a `fracao` do tempo total
+function aplicarFatia(f, fracao){
+  if(!f.total) return;
+  for(const k in f.total){
+    if(k === 'rotulo') continue;
+    const passo = f.total[k] * fracao;
+    if(!passo) continue;
+    if(k === 'dinheiro'){
+      S.dinheiro += passo;
+      f.gasto = (f.gasto||0) + passo;
+    } else if(k === 'despensa'){
+      S.despensa = cl(S.despensa + passo, 0, 100);
+    } else if(k === 'sujeira'){
+      S.sujeira = cl(S.sujeira + passo, 0, 100);
+    } else if(ALVO[k]){
+      const [obj, campo] = ALVO[k];
+      S[obj][campo] = cl(S[obj][campo] + passo, 0, 100);
+    }
+  }
+  f.andado = (f.andado||0) + fracao;
+}
+
 function iniciar(tipo, label, sub, horas, dados){
   if(involuntario()) return toast('Agora não dá. Espera isso passar.','x');
   if(ocupado()) return toast('Você já está no meio de outra coisa.','r');
-  S.fazendo = {tipo, label, sub, ini:S.t, fim:S.t+horas, dados: dados||{}};
+  S.fazendo = {tipo, label, sub, ini:S.t, fim:S.t+horas, dados: dados||{}, dur:Math.max(.01, horas)};
+  if(CONTINUAS.includes(tipo)){ S.fazendo.total = totaisDaAcao(tipo, dados); S.fazendo.andado = 0; }
   som('toc');
   if(S.vel === 0) setVel(3);
   render();
@@ -651,11 +713,20 @@ function pararAcao(){
   if(S.fazendo.sozinho) return toast('Isso não para porque você quer. Vai passar sozinho.','x');
   const f = S.fazendo;
   S.fazendo = null;
-  if(f.tipo === 'dormir') toast('Você levantou antes da hora.','x');
+  if(f.tipo === 'dormir'){
+    // sono cortado também conta, na medida do que dormiu
+    const horas = S.t - f.ini;
+    S.b.estresse = cl(S.b.estresse - (horas >= 6 ? 8 : horas*1.2), 0, 100);
+    toast('Você levantou antes da hora.','x');
+  } else if(f.total && f.gasto){
+    toast('Parou no meio. Já entrou '+Math.round((f.andado||0)*100)+'% do efeito, e o gasto foi proporcional.','x', 6000);
+  }
   render();
 }
 function concluir(f){
   const d = f.dados;
+  // fecha o que faltou do efeito proporcional
+  if(f.total) aplicarFatia(f, Math.max(0, 1 - (f.andado||0)));
   switch(f.tipo){
     case 'dormir': {
       // noite boa devolve ânimo; noite curta cobra
@@ -668,45 +739,22 @@ function concluir(f){
       else if(horas < 5) toast('Dormiu pouco. O dia vai custar caro.','x', 6000);
       break;
     }
-    case 'comer': {
-      const c = d.comida || CFG.comidas[0];
-      S.b.fome = cl(S.b.fome + c.fome, 0, 100);
-      S.b.corpo = cl(S.b.corpo + c.corpo, 0, 100);
-      S.base.corpo = cl(S.base.corpo + c.base, 0, 100);
-      // comer com fome sobe o ânimo bem mais do que comer sem fome
-      S.b.animo = cl(S.b.animo + c.animo + (S.b.fome < 45 ? 7 : 2), 0, 100);
-      if(c.desp) S.despensa = cl(S.despensa - c.desp, 0, 100);
-      if(c.custo){ S.dinheiro -= c.custo; ex(c.n, -c.custo); }
+    case 'comer':
+      if(f.gasto) ex(f.total.rotulo || 'Comida', f.gasto);
       break;
-    }
     case 'insta': break;
-    case 'banho':
-      S.b.higiene = cl(S.b.higiene+70,0,100);
-      // banho de manhã acorda de verdade; à noite é só alívio
-      S.b.animo = cl(S.b.animo + (hDia() < 12 ? 11 : 6), 0, 100);
-      S.b.estresse = cl(S.b.estresse-4,0,100);
-      break;
+    case 'banho': break;
     case 'correr':
-      S.b.corpo = cl(S.b.corpo+7,0,100); S.base.corpo = cl(S.base.corpo+1.6,0,100);
-      S.b.higiene = cl(S.b.higiene-25,0,100);
-      S.b.estresse = cl(S.b.estresse-14,0,100); S.base.estresse = cl(S.base.estresse-0.8,0,100);
-      S.b.animo = cl(S.b.animo + (hDia() < 11 ? 16 : 11), 0, 100);
       S.correuHa = 0;
       toast('Corrida feita. Ânimo em <b>'+Math.round(S.b.animo)+'</b> e a cabeça limpa.','v'); break;
     case 'mercado':
-      S.despensa = 100; S.dinheiro -= CFG.mercado.custo; ex('Mercado', -CFG.mercado.custo);
+      if(f.gasto) ex('Mercado', f.gasto);
       toast('Despensa cheia.','v'); break;
-    case 'limpar': S.sujeira = 0; S.b.animo = cl(S.b.animo+4,0,100); break;
-    case 'tv': S.b.animo = cl(S.b.animo+9,0,100); S.b.estresse = cl(S.b.estresse-4,0,100); break;
+    case 'limpar': break;
+    case 'tv': break;
     case 'tania':
-      S.b.casamento = cl(S.b.casamento + (d.grande?12:6), 0, 100);
-      S.base.casamento = cl(S.base.casamento + (d.grande?2:1), 0, 100);
-      S.b.estresse = cl(S.b.estresse-10,0,100);
-      S.b.animo = cl(S.b.animo+6,0,100);
       toast('Tempo com a Tania. Ela reparou.','v'); break;
     case 'limpezaTania':
-      S.b.casamento = cl(S.b.casamento+10,0,100); S.base.casamento = cl(S.base.casamento+3,0,100);
-      S.b.energia = cl(S.b.energia-30,0,100);
       toast('4 horas de limpeza. O corpo sentiu.','x'); break;
     case 'curso':
       S.hab.execucao = cl(S.hab.execucao+CFG.curso.ganho,0,100);
@@ -823,6 +871,8 @@ function avancar(dt){
   // --- ação em curso
   if(S.fazendo){
     const f = S.fazendo;
+    // o efeito entra aos poucos, na proporção do tempo já gasto
+    if(f.total && f.dur) aplicarFatia(f, Math.min(dt/f.dur, Math.max(0, 1-(f.andado||0))));
     if(f.tipo === 'projeto'){
       const p = S.projetos.find(x => x.id === f.dados.id);
       if(!p){ S.fazendo = null; }
@@ -890,7 +940,9 @@ function autocuidado(){
          txt:'<b>A bagunça passou do ponto.</b> Você começou a limpar sem decidir isso.'};
 
   if(!a) return;
-  S.fazendo = {tipo:a.tipo, label:a.label, sub:a.sub, ini:S.t, fim:S.t+a.h, dados:a.dados||{}, sozinho:true};
+  S.fazendo = {tipo:a.tipo, label:a.label, sub:a.sub, ini:S.t, fim:S.t+a.h,
+               dados:a.dados||{}, sozinho:true, dur:Math.max(.01, a.h),
+               total: totaisDaAcao(a.tipo, a.dados||{}), andado:0};
   toast(a.txt, 'x', 7500);
   render();
 }
@@ -919,7 +971,9 @@ function vontadePropria(){
       '<b>Travou no feed.</b> Nem lembra por que abriu.',
     ]), 'x', 6500);
   } else if(r < 0.85){
-    S.fazendo = {tipo:'comer', label:'Foi na cozinha beliscar', sub:'não era fome', ini:S.t, fim:S.t + .25, dados:{comida:CFG.comidas.find(c=>c.id==='doce')}, sozinho:true};
+    const doce = CFG.comidas.find(c=>c.id==='doce');
+    S.fazendo = {tipo:'comer', label:'Foi na cozinha beliscar', sub:'não era fome', ini:S.t, fim:S.t + .25,
+                 dados:{comida:doce}, sozinho:true, dur:.25, total: totaisDaAcao('comer',{comida:doce}), andado:0};
     toast('<b>Levantou pra beliscar.</b> Não era fome, era cansaço.', 'x', 6000);
   } else {
     const min = ri(10, 25);
@@ -1944,8 +1998,23 @@ function menuMovel(id){
     case 'piaCoz':   return iniciar('limpar','Limpando a casa','a sujeira volta sozinha', 1);
     case 'box': case 'piaBan': case 'vaso': return iniciar('banho','No banho','', .35);
     case 'sofa':     return menuTania();
-    case 'porta':    return iniciar('correr','Correndo na rua','', 1);
+    case 'porta':    return menuSair();
   }
+}
+
+function menuSair(){
+  sheet(`<h2>Sair de casa</h2>
+    <div class="sub">Despensa em <b>${Math.round(S.despensa)}%</b> · você tem <b>${fmt(S.dinheiro)}</b>.</div>`, [
+    {ic:'🏃', n:'Correr na rua', d:'+7 de corpo agora e +1,6 na base, −14 de estresse, muito ânimo de manhã', c:'1h',
+     click:()=>{ fecharSheet(); iniciar('correr','Correndo na rua','', 1); }},
+    {ic:'🛒', n:'Ir ao mercado', d:'Enche a despensa até 100', c:fmt(CFG.mercado.custo),
+     disabled: S.dinheiro < CFG.mercado.custo,
+     click:()=>{ fecharSheet(); iniciar('mercado','No mercado','', CFG.mercado.horas); }},
+    {ic:'🎓', n:'Curso de Excel avançado', d:'+10 de Execução, pra sempre', c:fmt(CFG.curso.custo),
+     disabled: S.dinheiro < CFG.curso.custo,
+     click:()=>{ fecharSheet(); iniciar('curso','Fazendo o curso','+10 de execução', CFG.curso.horas); }},
+    {ic:'↩︎', n:'Ficar em casa', click: fecharSheet},
+  ]);
 }
 
 /* ============================================================
@@ -2029,7 +2098,7 @@ const AJUDA = {
     baixo: 'Abaixo de 30 ela cobra, e a cobrança derruba seu ânimo 0,8 por hora. A base cai todo santo dia: café resolve o dia, não a base.',
   },
   despensa: {
-    onde: 'Botão Mercado, ou a porta de casa',
+    onde: 'A porta de casa, no banheiro — toque nela e escolha o mercado',
     sobe: [['Ir ao mercado', 'enche até 100 por R$ 250']],
     desce: [['Frango grelhado', '−12'], ['Marmita caseira', '−10'], ['Ovo com arroz', '−6'],
             ['Café com pão', '−4'], ['Miojo', '−3']],
@@ -2183,7 +2252,7 @@ function tarefasAgora(){
 
   if(S.ra.abertas.length) t.push({ic:'⚠️', n:'Reclame Aqui', q:S.ra.abertas.length+' aberta', cor:'urgente', faz:()=>irPara('fama')});
 
-  return t.slice(0, 5);
+  return t.slice(0, 3);
 }
 
 function montarTarefas(){
@@ -2861,15 +2930,15 @@ function doer(qual){
 /* ---------- trilha de fundo: três climas bem diferentes ---------- */
 const TRILHAS = {
   // parado: acordes longos, quase sem pulso. Dá pra perceber que nada acontece.
-  parado: {passo:1.30, vol:.030, tipo:'sine',
+  parado: {passo:1.30, vol:.10, tipo:'sine',
     baixo:[110,0,98,0,87,0,98,0],
     melo: [440,0,0,392,0,0,349,0]},
   // ação: arpejo alegre andando, ritmo médio
-  acao: {passo:0.34, vol:.026, tipo:'triangle',
+  acao: {passo:0.34, vol:.085, tipo:'triangle',
     baixo:[131,0,131,0,175,0,147,0],
     melo: [523,659,784,659,587,698,880,698]},
   // trabalho: pulso seco e repetitivo, cabeça baixa
-  trabalho: {passo:0.30, vol:.020, tipo:'square',
+  trabalho: {passo:0.30, vol:.065, tipo:'square',
     baixo:[98,98,0,98,0,98,98,0],
     melo: [294,0,349,0,294,0,262,0]},
 };
