@@ -95,19 +95,61 @@ h1,h2,h3{font-family:'Bricolage Grotesque',system-ui,sans-serif; margin:0; text-
 .miniBar{height:4px; border-radius:3px; background:var(--linha); overflow:hidden; margin-top:3px}
 .miniBar i{display:block; height:100%; border-radius:3px; background:var(--roxo)}
 
-/* vitais sempre visíveis */
-#vitais{display:flex; gap:3px; width:100%}
+/* vitais: coluna em pé, no alto à esquerda, sempre visível */
+#vitais{
+  position:absolute; left:6px; top:6px; z-index:20;
+  display:flex; flex-direction:column; gap:4px; width:62px;
+}
 #vitais button{
-  flex:1; background:var(--carta); border-radius:8px; padding:3px 1px 4px;
-  display:flex; flex-direction:column; align-items:center; line-height:1.15;
-  border-bottom:2px solid transparent;
+  background:rgba(35,46,74,.90); border-radius:9px; padding:4px 5px;
+  display:grid; grid-template-columns:15px 1fr; grid-template-rows:auto 4px;
+  gap:0 5px; align-items:center; backdrop-filter:blur(3px);
+  box-shadow:0 2px 8px rgba(6,10,20,.4);
 }
 #vitais button:active{transform:scale(.94)}
-#vitais button i{font-style:normal; font-size:11px; opacity:.85}
+#vitais button i{font-style:normal; font-size:12px; grid-row:1; grid-column:1}
 #vitais button u{
-  text-decoration:none; font-family:'DM Mono',monospace; font-size:11.5px; font-weight:500;
-  font-variant-numeric:tabular-nums;
+  grid-row:1; grid-column:2; text-align:right;
+  text-decoration:none; font-family:'DM Mono',monospace; font-size:13px; font-weight:500;
+  font-variant-numeric:tabular-nums; line-height:1.1;
 }
+#vitais button s{
+  grid-row:2; grid-column:1 / -1; text-decoration:none;
+  height:4px; border-radius:3px; background:rgba(255,255,255,.13); overflow:hidden; display:block;
+  position:relative; margin-top:2px;
+}
+#vitais button s b{display:block; height:100%; border-radius:3px}
+#vitais button s em{
+  position:absolute; top:-1px; width:2px; height:6px; background:rgba(255,255,255,.75); border-radius:1px;
+}
+
+/* ações grandes, em pé, no canto inferior direito */
+#acoes{
+  position:absolute; right:7px; bottom:8px; z-index:20;
+  display:flex; flex-direction:column-reverse; gap:5px; align-items:flex-end;
+  max-height:calc(100% - 14px); overflow-y:auto; padding:2px;
+  scrollbar-width:none;
+}
+#acoes::-webkit-scrollbar{display:none}
+#acoes button{
+  width:56px; height:52px; border-radius:15px;
+  background:rgba(35,46,74,.93); box-shadow:0 3px 10px rgba(6,10,20,.5);
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px;
+  backdrop-filter:blur(3px); border:1px solid rgba(255,255,255,.06);
+}
+#acoes button:active{transform:scale(.92)}
+#acoes button .ai{font-size:21px; line-height:1}
+#acoes button .an{font-size:8.5px; font-weight:700; letter-spacing:.2px; color:var(--texto2)}
+#acoes button.destaque{background:var(--laranja); border-color:transparent}
+#acoes button.destaque .an{color:#231603}
+#acoes button.travado{opacity:.4}
+#acoes button .selo{
+  position:absolute; margin:-40px 0 0 34px; background:var(--vermelho); color:#fff;
+  font-size:9px; font-weight:800; min-width:16px; height:16px; border-radius:8px;
+  display:flex; align-items:center; justify-content:center; padding:0 3px;
+}
+.view.on#v-casa{padding-left:0}
+#v-zap .pad, #v-grana .pad, #v-fama .pad{padding-left:74px}
 /* painel de cada barra */
 .vTopo{display:flex; align-items:center; gap:11px; margin-bottom:12px}
 .vTopo .ico{font-size:27px; line-height:1}
@@ -347,10 +389,11 @@ input[type=email]{
       <div class="chip" id="cDivida"><div class="k">Dívida</div><div class="v">R$ 0</div></div>
       <div class="chip" id="cFama"><div class="k">Google</div><div class="v">5,0★</div></div>
     </div>
-    <button id="vitais" aria-label="Como você está"></button>
   </header>
 
   <div id="views">
+    <div id="vitais"></div>
+    <div id="acoes"></div>
     <section class="view on" id="v-casa">
       <div id="houseWrap"><canvas id="house"></canvas></div>
     </section>
@@ -410,10 +453,12 @@ const CFG = {
   dormeEnergia: 12,
   corpoParado: -0.7,
 
+  // 09/2026: preco e horas cortados em 1/3. O projeto vale menos, entao o gargalo
+  // deixa de ser executar e passa a ser FECHAR — que e onde a vida real aperta.
   tipos: {
-    S: {nome:'Simples',  pMin:300,  pMax:1000, hMin:5,  hMax:14, peso:45},
-    M: {nome:'Médio',    pMin:1000, pMax:2000, hMin:14, hMax:28, peso:45},
-    C: {nome:'Complexo', pMin:2000, pMax:4000, hMin:28, hMax:55, peso:10},
+    S: {nome:'Simples',  pMin:200,  pMax:670,  hMin:3,  hMax:9,  peso:45},
+    M: {nome:'Médio',    pMin:670,  pMax:1330, hMin:9,  hMax:19, peso:45},
+    C: {nome:'Complexo', pMin:1330, pMax:2670, hMin:19, hMax:37, peso:10},
   },
   classes: {
     A: {teto:1.15, sup:0.5, sat:88},
@@ -425,8 +470,33 @@ const CFG = {
     normal: {p:0.50, custoMin:50, custoMax:90,  volMin:.60, volMax:.90,  mixA:.25, mixB:.50},
     ruim:   {p:0.25, custoMin:90, custoMax:130, volMin:.30, volMax:.60,  mixA:.10, mixB:.45},
   },
-  noShow: 0.15,
-  followMax: 3, followBonus: 0.12, followHoras: 0.25,
+  noShow: 0.28,
+  followMax: 3, followBonus: 0.10, followHoras: 0.25,
+
+  // o atual persegue o basal: 1,2% da diferença por hora
+  puxaBasal: 0.012,
+  comBasal: ['energia','animo','corpo','casamento','estresse'],
+
+  comidas: [
+    {id:'marmita', ic:'🍛', n:'Marmita caseira', d:'Arroz, feijão, carne e salada', h:.7,
+     fome:55, corpo:3, base:0.6, animo:2, custo:0, desp:10},
+    {id:'grelhado', ic:'🥗', n:'Frango grelhado com salada', d:'Dá trabalho e vale', h:.85,
+     fome:45, corpo:6, base:1.2, animo:1, custo:0, desp:12},
+    {id:'ovo', ic:'🍳', n:'Ovo com arroz', d:'Rápido e resolve', h:.3,
+     fome:32, corpo:1, base:0.2, animo:0, custo:0, desp:6},
+    {id:'pao', ic:'🥪', n:'Café com pão', d:'Mata a fome por pouco tempo', h:.2,
+     fome:20, corpo:0, base:0, animo:1, custo:0, desp:4},
+    {id:'miojo', ic:'🍜', n:'Miojo', d:'Você sabe o que está fazendo', h:.2,
+     fome:28, corpo:-4, base:-0.5, animo:1, custo:0, desp:3},
+    {id:'burger', ic:'🍔', n:'Hambúrguer no app', d:'Chega em 30 minutos', h:.5,
+     fome:62, corpo:-7, base:-1.1, animo:5, custo:55, desp:0},
+    {id:'pizza', ic:'🍕', n:'Pizza inteira', d:'Sábado é sábado', h:.7,
+     fome:75, corpo:-10, base:-1.6, animo:8, custo:78, desp:0},
+    {id:'doce', ic:'🍫', n:'Só um doce', d:'Não é comida, é consolo', h:.15,
+     fome:12, corpo:-3, base:-0.4, animo:6, custo:12, desp:0},
+  ],
+
+  insta: {passo:0.25, animoCurto:2.5, custoBasal:0.5, estresse:0.8, limiteDia:1.5},
 
   divida: [
     {ate:10000, nome:'Cartão de crédito', juros:.05},
@@ -466,7 +536,12 @@ function novoJogo(){
     vel: 3,
     dinheiro: 12000,
     divida: 0,
-    b: {energia:78, fome:70, higiene:80, animo:72, corpo:55, estresse:18, casamento:74},
+    b:    {energia:78, fome:70, higiene:80, animo:72, corpo:55, estresse:18, casamento:74},
+    base: {energia:72, fome:50, higiene:50, animo:68, corpo:58, estresse:22, casamento:70},
+    insta: {hoje:0, total:0},
+    horasTrabalhoHoje: 0,
+    correuHa: 0,
+    vontade: null,
     hab: {vendas:22, execucao:30, suporte:15},
     despensa: 70,
     sujeira: 20,
@@ -574,15 +649,24 @@ function concluir(f){
   const d = f.dados;
   switch(f.tipo){
     case 'dormir': break;
-    case 'comer':
-      S.b.fome = cl(S.b.fome + (d.bom?60:30), 0, 100);
-      if(d.bom){ S.despensa = cl(S.despensa-9,0,100); S.b.animo += 2; }
-      else { S.b.corpo = cl(S.b.corpo-2,0,100); S.dinheiro -= 45; ex('Delivery', -45); }
+    case 'comer': {
+      const c = d.comida || CFG.comidas[0];
+      S.b.fome = cl(S.b.fome + c.fome, 0, 100);
+      S.b.corpo = cl(S.b.corpo + c.corpo, 0, 100);
+      S.base.corpo = cl(S.base.corpo + c.base, 0, 100);
+      S.b.animo = cl(S.b.animo + c.animo, 0, 100);
+      if(c.desp) S.despensa = cl(S.despensa - c.desp, 0, 100);
+      if(c.custo){ S.dinheiro -= c.custo; ex(c.n, -c.custo); }
       break;
+    }
+    case 'insta': break;
     case 'banho': S.b.higiene = cl(S.b.higiene+70,0,100); S.b.animo += 3; break;
     case 'correr':
-      S.b.corpo = cl(S.b.corpo+9,0,100); S.b.higiene = cl(S.b.higiene-25,0,100);
-      S.b.estresse = cl(S.b.estresse-8,0,100); S.b.animo = cl(S.b.animo+5,0,100);
+      S.b.corpo = cl(S.b.corpo+7,0,100); S.base.corpo = cl(S.base.corpo+1.6,0,100);
+      S.b.higiene = cl(S.b.higiene-25,0,100);
+      S.b.estresse = cl(S.b.estresse-8,0,100); S.base.estresse = cl(S.base.estresse-0.8,0,100);
+      S.b.animo = cl(S.b.animo+5,0,100);
+      S.correuHa = 0;
       toast('Corrida feita. A cabeça limpa junto.','v'); break;
     case 'mercado':
       S.despensa = 100; S.dinheiro -= CFG.mercado.custo; ex('Mercado', -CFG.mercado.custo);
@@ -590,11 +674,14 @@ function concluir(f){
     case 'limpar': S.sujeira = 0; S.b.animo = cl(S.b.animo+4,0,100); break;
     case 'tv': S.b.animo = cl(S.b.animo+9,0,100); S.b.estresse = cl(S.b.estresse-4,0,100); break;
     case 'tania':
-      S.b.casamento = cl(S.b.casamento+22,0,100); S.b.estresse = cl(S.b.estresse-10,0,100);
+      S.b.casamento = cl(S.b.casamento + (d.grande?12:6), 0, 100);
+      S.base.casamento = cl(S.base.casamento + (d.grande?2:1), 0, 100);
+      S.b.estresse = cl(S.b.estresse-10,0,100);
       S.b.animo = cl(S.b.animo+6,0,100);
       toast('Tempo com a Tania. Ela reparou.','v'); break;
     case 'limpezaTania':
-      S.b.casamento = cl(S.b.casamento+18,0,100); S.b.energia = cl(S.b.energia-30,0,100);
+      S.b.casamento = cl(S.b.casamento+10,0,100); S.base.casamento = cl(S.base.casamento+3,0,100);
+      S.b.energia = cl(S.b.energia-30,0,100);
       toast('4 horas de limpeza. O corpo sentiu.','x'); break;
     case 'curso':
       S.hab.execucao = cl(S.hab.execucao+CFG.curso.ganho,0,100);
@@ -666,6 +753,22 @@ function avancar(dt){
 
   S.sujeira = cl(S.sujeira + 1.4*dt, 0, 100);
 
+  // instagram: sobe o ânimo na hora e cobra depois
+  if(S.fazendo && S.fazendo.tipo === 'insta'){
+    S.insta.hoje += dt; S.insta.total += dt;
+    b.animo = cl(b.animo + CFG.insta.animoCurto*dt, 0, 100);
+    if(S.insta.hoje > CFG.insta.limiteDia){
+      b.estresse = cl(b.estresse + CFG.insta.estresse*dt, 0, 100);
+      S.base.animo = cl(S.base.animo - CFG.insta.custoBasal*dt, 0, 100);
+    }
+  }
+  if(S.fazendo && S.fazendo.tipo === 'projeto') S.horasTrabalhoHoje += dt;
+
+  // o atual persegue o basal: quem tem base boa se recupera sozinho
+  CFG.comBasal.forEach(k => {
+    b[k] = cl(b[k] + (S.base[k] - b[k]) * CFG.puxaBasal * dt, 0, 100);
+  });
+
   // estresse contínuo por dívida
   b.estresse = cl(b.estresse + (S.divida/5000)*(dt/24), 0, 100);
 
@@ -724,7 +827,42 @@ function porHora(d){
   });
   if(h === 8 && !fds()) chegarChamado();
   if(h === 15) chegarChamado();
+  vontadePropria();
   render(true);
+}
+
+// o personagem tem vontade própria: cabeça cansada foge do trabalho sozinha
+function vontadePropria(){
+  const f = S.fazendo;
+  if(!f || !['projeto','chamado'].includes(f.tipo)) return;
+  const b = S.b;
+  let ch = 0.05;
+  if(b.animo < 45) ch += (45 - b.animo) * 0.005;
+  if(b.estresse > 55) ch += (b.estresse - 55) * 0.004;
+  if(b.energia < 45) ch += (45 - b.energia) * 0.004;
+  if(S.horasTrabalhoHoje > 5) ch += (S.horasTrabalhoHoje - 5) * 0.03;
+  if(S.depre) ch += 0.25;
+  ch = Math.min(ch, 0.55);
+  if(Math.random() > ch) return;
+
+  const r = Math.random();
+  if(r < 0.62){
+    const min = ri(20, 50);
+    S.fazendo = {tipo:'insta', label:'Rolando o Instagram', sub:'sem perceber', ini:S.t, fim:S.t + min/60, dados:{}, sozinho:true};
+    toast(pick([
+      '<b>Você abriu o Instagram sem pensar.</b> O código ficou pra trás.',
+      '<b>Pegou o celular "só um minuto".</b> Já faz um tempo.',
+      '<b>Travou no feed.</b> Nem lembra por que abriu.',
+    ]), 'x', 6500);
+  } else if(r < 0.85){
+    S.fazendo = {tipo:'comer', label:'Foi na cozinha beliscar', sub:'não era fome', ini:S.t, fim:S.t + .25, dados:{comida:CFG.comidas.find(c=>c.id==='doce')}, sozinho:true};
+    toast('<b>Levantou pra beliscar.</b> Não era fome, era cansaço.', 'x', 6000);
+  } else {
+    S.fazendo = null;
+    S.b.animo = cl(S.b.animo - 3, 0, 100);
+    toast('<b>Você parou.</b> Ficou olhando pra parede uns minutos.', 'x', 6000);
+  }
+  render();
 }
 
 function tentarLead(){
@@ -807,10 +945,26 @@ function porDia(d){
     S.rendTotal = (S.rendTotal||0) + rend;
   }
 
-  // corpo
+  // ---- o basal, que é o hábito e não o dia
+  S.correuHa = (S.correuHa||0) + 1;
+  if(S.correuHa >= 3) S.base.corpo = cl(S.base.corpo - 0.9, 0, 100);      // parou de correr
+  if(S.b.energia > 75) S.base.energia = cl(S.base.energia + 0.4, 0, 100); // dormiu bem
+  if(S.b.energia < 35) S.base.energia = cl(S.base.energia - 0.5, 0, 100);
+  if(S.b.animo > 70) S.base.animo = cl(S.base.animo + 0.3, 0, 100);
+  if(S.b.animo < 35) S.base.animo = cl(S.base.animo - 0.5, 0, 100);
+  if(S.b.estresse > 70) S.base.estresse = cl(S.base.estresse + 0.7, 0, 100);
+  if(S.b.estresse < 30) S.base.estresse = cl(S.base.estresse - 0.6, 0, 100);
+  S.base.casamento = cl(S.base.casamento - 0.8, 0, 100);
+  if(S.horasTrabalhoHoje > 8){
+    S.b.casamento = cl(S.b.casamento - 4, 0, 100);
+    S.base.casamento = cl(S.base.casamento - 0.6, 0, 100);
+  }
+  if(S.insta.hoje > 3) S.base.animo = cl(S.base.animo - 1, 0, 100);
+  S.insta.hoje = 0; S.horasTrabalhoHoje = 0;
+
+  // corpo e casamento do dia
   S.b.corpo = cl(S.b.corpo + CFG.corpoParado, 0, 100);
-  // casamento
-  S.b.casamento = cl(S.b.casamento - 3, 0, 100);
+  S.b.casamento = cl(S.b.casamento - 2.2, 0, 100);
 
   // habilidades caem com desuso
   if(!S.usouVendasHoje) S.hab.vendas = cl(S.hab.vendas - 0.8, 0, 100);
@@ -969,7 +1123,7 @@ function fimReuniao(id){
     toast('<b>'+l.nome+' não apareceu.</b> O lead você já pagou.','r');
     return;
   }
-  let ch = 0.55 + (S.hab.vendas-40)/220 + repIndice()*0.12;
+  let ch = 0.40 + (S.hab.vendas-40)/220 + repIndice()*0.12;
   if(S.b.higiene < 25) ch -= 0.18;
   if(S.b.animo < 30) ch -= 0.15;
   if(S.depre) ch -= 0.4;
@@ -1012,7 +1166,7 @@ function abrirOrcamento(id){
 function chanceFechar(l){
   const r = l.orcamento / l.teto;
   let base = 1/(1 + Math.exp(7.32*(r-1)));
-  base *= (0.75 + 0.5*S.hab.vendas/100);
+  base *= (0.68 + 0.45*S.hab.vendas/100);
   base += l.follows*CFG.followBonus;
   if(l.frio) base -= 0.15;
   base += repIndice()*0.08;
@@ -1463,7 +1617,7 @@ function posBoneco(){
   const mapa = {dormir:'cama', comer:'mesaCoz', banho:'box', tv:'sofa', limpar:'sofa',
     projeto:'mesaTrab', reuniao:'mesaTrab', follow:'mesaTrab', chamado:'mesaTrab',
     avaliacao:'mesaTrab', responderRA:'mesaTrab', curso:'mesaTrab', tania:'sofa',
-    correr:'porta', mercado:'porta', limpezaTania:'porta'};
+    correr:'porta', mercado:'porta', limpezaTania:'porta', insta:'sofa'};
   const id = f ? (mapa[f.tipo]||'mesaTrab') : 'mesaTrab';
   const m = MOVEIS.find(x => x.id === id) || MOVEIS[5];
   if(id === 'cama')     return {x:m.x+82, y:m.y+40, deitado:true};
@@ -1516,6 +1670,13 @@ function desenharBoneco(){
     cx.fillStyle='#8E6BD9'; cx.font='700 13px Figtree';
     cx.fillText('!', p.x+14, y-58 + Math.sin(bounce*3)*2);
   }
+  // celular na mão quando está rolando o feed
+  if(f && f.tipo === 'insta'){
+    fill('#1A1F2B', p.x+9, y-42, 9, 15, 2);
+    fill('#7FB3E8', p.x+10, y-41, 7, 12, 1);
+    cx.fillStyle = 'rgba(140,190,240,.35)';
+    cx.beginPath(); cx.moveTo(p.x+13, y-41); cx.lineTo(p.x+3, y-55); cx.lineTo(p.x+25, y-55); cx.fill();
+  }
 }
 
 /* ---------- toque na casa ---------- */
@@ -1529,55 +1690,18 @@ cv.addEventListener('click', e => {
   menuMovel(m.id);
 });
 
-/* ---------- menus dos móveis ---------- */
+/* ---------- tocar no móvel faz a mesma coisa que o botão ---------- */
 function menuMovel(id){
-  const b = S.b, o = [];
-  const podeAcordarCedo = b.energia > 50 && b.animo > 40;
-  const add = (ic,n,d,c,click,off) => o.push({ic,n,d,c,click,disabled:off});
-
-  if(id === 'cama'){
-    const ate = (hDia() < 7 ? 7-hDia() : 31-hDia());
-    add('🛏️','Dormir até de manhã', 'Recupera energia. O relógio avança.', dur(ate),
-      ()=>{ fecharSheet(); iniciar('dormir','Dormindo','até as 07:00', ate); });
-    add('😴','Cochilo de 2 horas','Alívio rápido, não resolve','2h',
-      ()=>{ fecharSheet(); iniciar('dormir','Cochilando','2 horas', 2); });
-    if(!podeAcordarCedo) o.push({ic:'⏰', n:'Acordar cedo amanhã', d:'Cansado e desmotivado demais pra isso', disabled:true});
+  const ate = (hDia() < 7 ? 7-hDia() : 31-hDia());
+  switch(id){
+    case 'mesaTrab': return abrirMesa();
+    case 'cama':     return iniciar('dormir','Dormindo','até as 07:00', ate);
+    case 'geladeira': case 'fogao': case 'mesaCoz': return menuComida();
+    case 'piaCoz':   return iniciar('limpar','Limpando a casa','a sujeira volta sozinha', 1);
+    case 'box': case 'piaBan': case 'vaso': return iniciar('banho','No banho','', .35);
+    case 'sofa':     return menuTania();
+    case 'porta':    return iniciar('correr','Correndo na rua','', 1);
   }
-  if(id === 'geladeira' || id === 'fogao'){
-    add('🍳','Cozinhar e comer','+60 de fome, usa a despensa', dur(0.7),
-      ()=>{ fecharSheet(); iniciar('comer','Cozinhando','almoço decente', .7, {bom:true}); }, S.despensa < 10);
-    add('🍕','Pedir delivery','+30 de fome, tira do corpo e do bolso','R$ 45',
-      ()=>{ fecharSheet(); iniciar('comer','Esperando a entrega','comida de app', .5, {bom:false}); });
-    if(S.despensa < 10) o.push({ic:'📦', n:'Despensa vazia', d:'Precisa ir ao mercado antes de cozinhar', disabled:true});
-  }
-  if(id === 'piaCoz' || id === 'mesaCoz'){
-    add('🧹','Limpar a casa','Zera a sujeira', '1h',
-      ()=>{ fecharSheet(); iniciar('limpar','Limpando a casa','a sujeira volta sozinha', 1); });
-    add('☕','Café com a Tania','Casamento e estresse agradecem','45 min',
-      ()=>{ fecharSheet(); iniciar('tania','Tempo com a Tania','café na cozinha', .75); });
-  }
-  if(id === 'box' || id === 'piaBan' || id === 'vaso'){
-    add('🚿','Tomar banho','+70 de higiene','20 min',
-      ()=>{ fecharSheet(); iniciar('banho','No banho','', .35); });
-  }
-  if(id === 'sofa'){
-    add('📺','Ver TV','Ânimo sobe devagar, estresse cai','1h',
-      ()=>{ fecharSheet(); iniciar('tv','Vendo TV','descanso', 1); });
-    add('❤️','Ficar com a Tania','+22 casamento, −10 estresse','1h30',
-      ()=>{ fecharSheet(); iniciar('tania','Tempo com a Tania','sofá, sem celular', 1.5); });
-  }
-  if(id === 'porta'){
-    add('🏃','Sair pra correr','+corpo, −estresse, +ânimo','1h',
-      ()=>{ fecharSheet(); iniciar('correr','Correndo na rua','', 1); });
-    add('🛒','Ir ao mercado','Enche a despensa', fmt(CFG.mercado.custo),
-      ()=>{ fecharSheet(); iniciar('mercado','No mercado','', CFG.mercado.horas); });
-    add('🎓','Fazer o curso de Excel avançado','+10 de Execução, pra sempre', fmt(CFG.curso.custo),
-      ()=>{ fecharSheet(); iniciar('curso','Fazendo o curso','', CFG.curso.horas); }, S.dinheiro < CFG.curso.custo);
-  }
-  if(id === 'mesaTrab'){ abrirMesa(); return; }
-
-  const m = MOVEIS.find(x=>x.id===id);
-  sheet(`<h2>${m.lab}</h2><div class="sub">${hhmm(hDia())} · ${S.depre?'Você está travado. Quase nada rende.':'O que você faz agora?'}</div>`, o);
 }
 
 /* ============================================================
@@ -1609,10 +1733,13 @@ const AJUDA = {
     baixo: 'Abaixo de 30 você trabalha 40% mais devagar. É o jeito mais caro de perder dinheiro.',
   },
   fome: {
-    onde: 'Fogão e geladeira, na cozinha',
-    sobe: [['Cozinhar e comer', '+60'], ['Delivery', '+30, R$ 45 e −2 de corpo']],
+    onde: 'Botão Comer, com 8 opções',
+    sobe: [['Pizza inteira', '+75, R$ 78 e −10 de corpo'], ['Hambúrguer no app', '+62, R$ 55 e −7 de corpo'],
+           ['Marmita caseira', '+55 e +3 de corpo'], ['Frango grelhado com salada', '+45 e +6 de corpo'],
+           ['Ovo com arroz', '+32'], ['Miojo', '+28 e −4 de corpo'],
+           ['Café com pão', '+20'], ['Só um doce', '+12, +6 de ânimo e −3 de corpo']],
     desce: [['O tempo passando', '−5 por hora']],
-    baixo: 'Abaixo de 20 ela derruba energia e ânimo junto. Despensa vazia não deixa cozinhar.',
+    baixo: 'Abaixo de 20 ela derruba energia e ânimo junto. O que é rápido é ruim pro corpo, o que é bom pro corpo toma tempo. Escolher é o jogo.',
   },
   higiene: {
     onde: 'Chuveiro, no banheiro',
@@ -1623,29 +1750,36 @@ const AJUDA = {
   animo: {
     onde: 'Sofá, TV e tempo com a Tania',
     sobe: [['Ver TV por 1 hora', '+9'], ['Entregar um projeto', '+8'], ['Aniversário na família', '+10'],
+           ['Pizza ou hambúrguer', '+8 e +5'], ['Só um doce', '+6'],
            ['Tempo com a Tania', '+6'], ['Sair pra correr', '+5'], ['Limpar a casa', '+4'],
-           ['Banho', '+3'], ['Comida feita em casa', '+2']],
+           ['Rolar o Instagram', '+2,5 por hora, e cobra depois'], ['Banho', '+3']],
     desce: [['O tempo passando', '−1,5 por hora'], ['Cada projeto atrasado', '−0,6 por hora'],
             ['Cada projeto aberto além do 3º', '−0,3 por hora'], ['Cada chamado além do 1º', '−0,25 por hora'],
             ['Estresse acima de 80', '−0,9 por hora'], ['Casamento abaixo de 30', '−0,8 por hora'],
             ['Casa suja acima de 60', '−0,7 por hora'], ['Higiene abaixo de 25', '−0,5 por hora'],
+            ['Instagram além de 1h30 no dia', '−0,5 na base por hora'],
+            ['Instagram além de 3h no dia', '−1 na base'],
             ['Cobrança do agiota', '−12'], ['Gripe', '−8']],
     baixo: 'Abaixo de 30 tudo rende 25% menos. Abaixo de 10 por dois dias você trava, rende 40% e não conduz reunião nenhuma. Sai só com descanso, a 3 pontos por dia.',
   },
   corpo: {
-    onde: 'Porta de casa, correndo na rua',
-    sobe: [['Sair pra correr', '+9 por corrida']],
-    desce: [['Um dia sem se mexer', '−0,7'], ['Comer delivery', '−2']],
-    baixo: 'Abaixo de 40 sua energia cai 25% mais rápido o dia inteiro. É juros compostos contra você.',
+    onde: 'Botão Correr e o que você come',
+    sobe: [['Sair pra correr', '+7 agora, +1,6 na base'], ['Frango grelhado com salada', '+6 agora, +1,2 na base'],
+           ['Marmita caseira', '+3 agora, +0,6 na base']],
+    desce: [['Um dia sem se mexer', '−0,7'], ['Três dias sem correr', '−0,9 na base por dia'],
+            ['Pizza', '−10 agora, −1,6 na base'], ['Hambúrguer no app', '−7 agora, −1,1 na base'],
+            ['Miojo', '−4 agora, −0,5 na base']],
+    baixo: 'Abaixo de 40 sua energia cai 25% mais rápido o dia inteiro. Aqui a base é quem manda: quem corre sempre volta rápido de um fim de semana de pizza.',
   },
   casamento: {
-    onde: 'Cozinha e sofá, com a Tania',
-    sobe: [['Ficar com a Tania', '+22'], ['Café com a Tania', '+22'],
-           ['Ajudar na limpeza de quinta ou sábado', '+18'], ['Ir ao aniversário', '+12'],
-           ['Buscar ela na balada', '+10']],
-    desce: [['Um dia sem dar atenção', '−3'], ['Não buscar ela', '−14'],
-            ['Não ajudar na limpeza', '−12'], ['Faltar no aniversário', '−10']],
-    baixo: 'Abaixo de 30 ela cobra, e a cobrança derruba seu ânimo 0,8 por hora.',
+    onde: 'Botão Tania',
+    sobe: [['Uma hora e meia só com ela', '+12 agora, +2 na base'],
+           ['Ajudar no serviço de limpeza', '+10 agora, +3 na base'],
+           ['Café rápido na cozinha', '+6 agora, +1 na base'],
+           ['Ir ao aniversário', '+12'], ['Buscar ela na balada', '+10']],
+    desce: [['Um dia comum', '−2,2 agora, −0,8 na base'], ['Trabalhar mais de 8h no dia', '−4 agora, −0,6 na base'],
+            ['Não buscar ela', '−14'], ['Não ajudar na limpeza', '−12'], ['Faltar no aniversário', '−10']],
+    baixo: 'Abaixo de 30 ela cobra, e a cobrança derruba seu ânimo 0,8 por hora. A base cai todo santo dia: café resolve o dia, não a base.',
   },
   estresse: {
     onde: 'Corrida, TV e resolver o que está aberto',
@@ -1708,13 +1842,18 @@ function atualizarHud(){
   const vt = document.getElementById('vitais');
   const novo = VITAIS.map(v => {
     const val = Math.round(S.b[v.k]), c = corVital(val, v.invertido);
-    return `<button data-v="${v.k}" title="${v.n}" style="border-bottom-color:${c}"><i>${v.ic}</i><u style="color:${c}">${val}</u></button>`;
+    const temBase = CFG.comBasal.includes(v.k);
+    const bs = temBase ? Math.round(S.base[v.k]) : null;
+    return `<button data-v="${v.k}" title="${v.n}"><i>${v.ic}</i><u style="color:${c}">${val}</u>` +
+      `<s><b style="width:${val}%;background:${c}"></b>` +
+      (temBase ? `<em style="left:calc(${bs}% - 1px)"></em>` : '') + `</s></button>`;
   }).join('');
   if(vt.dataset.hash !== novo){
     vt.dataset.hash = novo;
     vt.innerHTML = novo;
     vt.querySelectorAll('[data-v]').forEach(b => b.onclick = () => abrirVital(b.dataset.v));
   }
+  montarAcoes();
 
   const doing = document.getElementById('doing');
   if(S.fazendo){
@@ -1747,6 +1886,73 @@ function badge(aba, n){
   if(!el) return;
   el.style.display = n > 0 ? 'flex' : 'none';
   el.textContent = n;
+}
+
+/* ---------- coluna de ações ---------- */
+function acoesDisponiveis(){
+  const ate = (hDia() < 7 ? 7-hDia() : 31-hDia());
+  return [
+    {id:'mesa',    ic:'💼', n:'Mesa',    selo: pendencias(), destaque:true, faz: abrirMesa},
+    {id:'comer',   ic:'🍽️', n:'Comer',   faz: menuComida},
+    {id:'dormir',  ic:'🛏️', n:'Dormir',  faz: () => iniciar('dormir','Dormindo','até as 07:00', ate)},
+    {id:'banho',   ic:'🚿', n:'Banho',   faz: () => iniciar('banho','No banho','', .35)},
+    {id:'correr',  ic:'🏃', n:'Correr',  faz: () => iniciar('correr','Correndo na rua','', 1)},
+    {id:'insta',   ic:'📱', n:'Insta',   faz: () => iniciar('insta','Rolando o Instagram','15 minutos', CFG.insta.passo)},
+    {id:'tania',   ic:'❤️', n:'Tania',   faz: menuTania},
+    {id:'limpar',  ic:'🧹', n:'Limpar',  faz: () => iniciar('limpar','Limpando a casa','a sujeira volta sozinha', 1)},
+    {id:'tv',      ic:'📺', n:'TV',      faz: () => iniciar('tv','Vendo TV','descanso', 1)},
+    {id:'mercado', ic:'🛒', n:'Mercado', faz: () => iniciar('mercado','No mercado','', CFG.mercado.horas)},
+    {id:'curso',   ic:'🎓', n:'Curso',   trava: S.dinheiro < CFG.curso.custo,
+                   faz: () => iniciar('curso','Fazendo o curso','+10 de execução', CFG.curso.horas)},
+  ];
+}
+
+function montarAcoes(){
+  const el = document.getElementById('acoes');
+  if(abaAtual !== 'casa'){ el.style.display = 'none'; return; }
+  el.style.display = 'flex';
+  const lista = acoesDisponiveis();
+  const chave = lista.map(a => a.id + (a.selo||'') + (a.trava?'x':'')).join('|');
+  if(el.dataset.hash === chave) return;
+  el.dataset.hash = chave;
+  el.innerHTML = lista.map((a,i) =>
+    `<button data-a="${i}" class="${a.destaque?'destaque':''} ${a.trava?'travado':''}">
+       <span class="ai">${a.ic}</span><span class="an">${a.n}</span>
+       ${a.selo ? `<span class="selo">${a.selo}</span>` : ''}
+     </button>`).join('');
+  el.querySelectorAll('[data-a]').forEach(b => {
+    const a = lista[+b.dataset.a];
+    b.onclick = () => { if(a.trava) return toast('Falta dinheiro pra isso.','x'); a.faz(); };
+  });
+}
+
+function menuComida(){
+  const opc = CFG.comidas.map(c => ({
+    ic: c.ic, n: c.n,
+    d: `${c.d} · ${dur(c.h)} · fome +${c.fome}` +
+       (c.corpo ? ` · corpo ${c.corpo>0?'+':''}${c.corpo}` : '') +
+       (c.desp ? ` · usa despensa` : ''),
+    c: c.custo ? fmt(c.custo) : (c.desp ? 'despensa' : ''),
+    disabled: (c.desp && S.despensa < c.desp) || (c.custo && S.dinheiro < c.custo),
+    click: () => { fecharSheet(); iniciar('comer', 'Comendo: '+c.n, c.d, c.h, {comida:c}); },
+  }));
+  sheet(`<h2>O que você vai comer?</h2>
+    <div class="sub">Fome em <b>${Math.round(S.b.fome)}</b> · despensa em <b>${Math.round(S.despensa)}%</b>.
+    Comida de verdade sobe o seu corpo de base. Porcaria derruba, e a base demora a voltar.</div>`, opc);
+}
+
+function menuTania(){
+  sheet(`<h2>A Tania</h2>
+    <div class="sub">Vocês estão em <b>${Math.round(S.b.casamento)}</b> hoje, com base em
+    <b>${Math.round(S.base.casamento)}</b>. Um café resolve o dia; o que segura a base é tempo de verdade.</div>`, [
+    {ic:'☕', n:'Café rápido na cozinha', d:'+6 no dia, +1 na base', c:'45 min',
+     click:()=>{ fecharSheet(); iniciar('tania','Café com a Tania','', .75, {grande:false}); }},
+    {ic:'❤️', n:'Uma hora e meia só com ela', d:'+12 no dia, +2 na base, −10 de estresse', c:'1h30',
+     click:()=>{ fecharSheet(); iniciar('tania','Tempo com a Tania','sem celular', 1.5, {grande:true}); }},
+    {ic:'🧽', n:'Ajudar no serviço de limpeza', d:'+10 no dia, +3 na base, −30 de energia', c:'4h',
+     click:()=>{ fecharSheet(); iniciar('limpezaTania','Ajudando a Tania','serviço de 4 horas', 4); }},
+    {ic:'↩︎', n:'Agora não', click: fecharSheet},
+  ]);
 }
 
 /* ---------- render das telas ---------- */
@@ -2069,6 +2275,8 @@ function abrirVital(k){
   if(!v || !a) return;
   const val = Math.round(S.b[k]), c = corVital(val, v.invertido);
   const ruim = v.invertido ? val > 85 : val < 30;
+  const temBase = CFG.comBasal.includes(k);
+  const bs = temBase ? Math.round(S.base[k]) : null;
 
   const lista = (itens, dir) => `<div class="linhas">${itens.map(([o,q]) =>
     `<div class="linha"><span class="o">${o}</span><span class="q ${dir}">${q}</span></div>`).join('')}</div>`;
@@ -2083,13 +2291,27 @@ function abrirVital(k){
     <div class="vTopo">
       <span class="ico">${v.ic}</span>
       <span class="lado">
-        <span class="rot">${v.invertido ? 'quanto menor, melhor' : 'quanto maior, melhor'}</span>
+        <span class="rot">agora</span>
         <div class="num" style="color:${c}">${val}</div>
       </span>
+      ${temBase ? `<span class="lado" style="text-align:right">
+        <span class="rot">de base</span>
+        <div class="num" style="color:var(--texto2);font-size:24px">${bs}</div>
+      </span>` : ''}
     </div>
-    <div class="bar" style="margin-bottom:14px">
-      <div class="t"><i style="width:${val}%;background:${c}"></i></div>
+    <div class="bar" style="margin-bottom:${temBase?'8':'14'}px">
+      <div class="t" style="position:relative">
+        <i style="width:${val}%;background:${c}"></i>
+        ${temBase ? `<span style="position:absolute;top:-2px;left:calc(${bs}% - 1.5px);width:3px;height:13px;background:#fff;border-radius:2px;box-shadow:0 0 0 1px rgba(0,0,0,.4)"></span>` : ''}
+      </div>
     </div>
+    ${temBase ? `<div class="meta" style="margin-bottom:14px;line-height:1.5">
+      O traço branco é a sua <b>base</b>: o hábito, não o dia.
+      ${val < bs - 4 ? 'Hoje você está <b style="color:var(--laranja)">abaixo</b> dela, então isso sobe sozinho de volta.'
+        : (val > bs + 4 ? 'Hoje você está <b style="color:var(--verde)">acima</b> dela, e vai cair de volta com o tempo.'
+        : 'Hoje você está bem na sua base.')}
+      Ação de hoje mexe no número da esquerda; repetição mexe na base.
+    </div>` : ''}
 
     <div class="secTit" style="margin-top:0">${v.invertido ? 'O que derruba' : 'O que melhora'}</div>
     ${lista(v.invertido ? a.desce : a.sobe, 'up')}
