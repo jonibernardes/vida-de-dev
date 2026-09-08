@@ -1585,7 +1585,7 @@ function desenharCasa(){
 
   // à noite só o cômodo onde ele está fica aceso; o resto vira breu
   const pBon = posBoneco();
-  const comodoDele = COMODOS.findIndex(c => pBon.y + offY - offY >= c.y0 - 10 && pBon.y <= c.y1 + 10);
+  const comodoDele = COMODOS.findIndex(c => pBon.y >= c.y0 - 10 && pBon.y <= c.y1 + 10);
 
   COMODOS.forEach((c, i) => {
     const hh = c.y1 - c.y0;
