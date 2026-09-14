@@ -476,6 +476,9 @@ const CFG = {
 
   decai: {energia:-4, fome:-5, higiene:-3, animo:-2.4},
   dormeEnergia: 12,
+  // ninguém acorda porque "deu 7h": dorme até o corpo encher, com teto de 11 horas
+  sonoAlvo: 96,
+  sonoTeto: 11,
   corpoParado: -0.7,
 
   // 09/2026: preco e horas cortados em 1/3. O projeto vale menos, entao o gargalo
@@ -669,7 +672,7 @@ const involuntario = () => !!(S.fazendo && S.fazendo.sozinho);
 // tudo que o piloto sabe fazer, e o que cada coisa mexe
 const ACOES_AUTO = {
   nada:      {n:'Não fazer nada', ic:'🚫'},
-  dormir:    {n:'Dormir até de manhã', ic:'🛏️', h:()=>(hDia()<7?7-hDia():31-hDia()), label:'Dormindo'},
+  dormir:    {n:'Dormir até acordar', ic:'🛏️', h:()=>CFG.sonoTeto, label:'Dormindo'},
   cochilo:   {n:'Cochilo de 2 horas', ic:'😴', tipo:'dormir', h:()=>2, label:'Cochilando'},
   banho:     {n:'Tomar banho', ic:'🚿', h:()=>.35, label:'No banho'},
   correr:    {n:'Sair pra correr', ic:'🏃', h:()=>1, label:'Correndo na rua'},
@@ -978,8 +981,8 @@ function concluir(f){
       S.b.animo = cl(S.b.animo + g, 0, 100);
       S.b.estresse = cl(S.b.estresse - (horas >= 6 ? 8 : 2), 0, 100);
       if(horas >= 6 && S.b.energia > 80) S.base.animo = cl(S.base.animo + .5, 0, 100);
-      if(g > 4) toast('Acordou <b>bem</b>. Ânimo em '+Math.round(S.b.animo)+'. Um banho e uma corrida terminam o serviço.','v', 6000);
-      else if(horas < 5) toast('Dormiu pouco. O dia vai custar caro.','x', 6000);
+      if(g > 4) toast('Acordou às <b>'+hhmm(hDia())+'</b> depois de '+dur(horas)+'. Ânimo em '+Math.round(S.b.animo)+'.','v', 6000);
+      else if(horas < 5) toast('Dormiu só '+dur(horas)+'. O dia vai custar caro.','x', 6000);
       break;
     }
     case 'comer':
@@ -1129,6 +1132,8 @@ function avancar(dt){
       const c = S.chamados.find(x => x.id === f.dados.id);
       if(!c) S.fazendo = null;
       else { c.feitas += dt*(1 + 0.5*S.hab.suporte/100); if(c.feitas >= c.horas) concluir(f); }
+    } else if(f.tipo === 'dormir' && b.energia >= CFG.sonoAlvo){
+      concluir(f);                       // acordou porque descansou, não porque o relógio mandou
     } else if(S.t >= f.fim){
       concluir(f);
     }
@@ -1167,12 +1172,12 @@ function porHora(d){
 function autocuidado(){
   if(involuntario()) return;
   const b = S.b;
-  const ate = (hDia() < 7 ? 7-hDia() : 31-hDia());
+  const ate = CFG.sonoTeto;
   const rapida = CFG.comidas.find(c => c.id === (S.despensa >= 6 ? 'ovo' : 'doce'));
   let a = null;
 
   if(b.energia < 8)
-    a = {tipo:'dormir', label:'Apagou de cansaço', sub:'o corpo desligou', h:Math.min(ate, 9),
+    a = {tipo:'dormir', label:'Apagou de cansaço', sub:'o corpo desligou', h:CFG.sonoTeto,
          txt:'<b>Você apagou.</b> Não teve escolha, o corpo desligou.'};
   else if(b.fome < 10)
     a = {tipo:'comer', label:'Comeu qualquer coisa', sub:'a fome mandou', h:rapida.h, dados:{comida:rapida},
@@ -2232,10 +2237,10 @@ cv.addEventListener('click', e => {
 
 /* ---------- tocar no móvel faz a mesma coisa que o botão ---------- */
 function menuMovel(id){
-  const ate = (hDia() < 7 ? 7-hDia() : 31-hDia());
+  const ate = CFG.sonoTeto;
   switch(id){
     case 'mesaTrab': return abrirMesa();
-    case 'cama':     return iniciar('dormir','Dormindo','até as 07:00', ate);
+    case 'cama':     return iniciar('dormir','Dormindo','até o corpo encher', ate);
     case 'geladeira': case 'fogao': case 'mesaCoz': return menuComida();
     case 'piaCoz':   return iniciar('limpar','Limpando a casa','a sujeira volta sozinha', 1);
     case 'box': case 'piaBan': case 'vaso': return iniciar('banho','No banho','', .35);
@@ -2286,7 +2291,7 @@ const valorVital = k => (k === 'despensa' || k === 'sujeira') ? S[k] : S.b[k];
 const AJUDA = {
   energia: {
     onde: 'Cama, no quarto',
-    sobe: [['Dormir até de manhã', '+12 por hora'], ['Cochilo de 2 horas', '+24']],
+    sobe: [['Dormir até acordar', '+12 por hora, até encher'], ['Cochilo de 2 horas', '+24']],
     desce: [['Ficar acordado', '−4 por hora'], ['Corpo abaixo de 40', 'cai 25% mais rápido'],
             ['Ajudar a Tania na limpeza', '−30'], ['Buscar a Tania de madrugada', '−14'], ['Gripe', '−35']],
     baixo: 'Abaixo de 30 você trabalha 40% mais devagar. É o jeito mais caro de perder dinheiro.',
@@ -2703,39 +2708,114 @@ function editarRegra(i){
     const el = document.getElementById('erExc');
     el.innerHTML = (r.exc||[]).length ? r.exc.map((e,j) =>
       `<div class="card"><div class="meta">Se <b>${nomeCondicao(e)}</b> → <b>${(ACOES_AUTO[e.faz]||{n:e.faz}).n}</b></div>
-       <div class="acts"><button class="btn gho" data-eA="${j}">Trocar ação</button>
+       <div class="acts"><button class="btn" data-eE="${j}">Editar</button>
        <button class="btn dan" data-eX="${j}">Remover</button></div></div>`).join('')
       : '<div class="vazio">Nenhuma. A ação padrão vale sempre.</div>';
     el.querySelectorAll('[data-eX]').forEach(x => x.onclick = () => { r.exc.splice(+x.dataset.eX,1); pintaExc(); });
-    el.querySelectorAll('[data-eA]').forEach(x => x.onclick = () => {
-      const e = r.exc[+x.dataset.eA];
-      sheet(`<h2>O que fazer nessa exceção</h2><div class="sub">Se ${nomeCondicao(e)}</div>`,
-        opcoes.map(id => ({ic:(ACOES_AUTO[id]||{}).ic||'•', n:(ACOES_AUTO[id]||{n:id}).n,
-          click:()=>{ e.faz = id; fecharSheet(); editarRegra(i); }})));
-    });
+    el.querySelectorAll('[data-eE]').forEach(x => x.onclick = () => editarExcecao(i, +x.dataset.eE));
   };
   pintaAcoes(); pintaExc();
 
   document.getElementById('erAdd').onclick = () => {
-    sheet('<h2>Quando abrir exceção</h2><div class="sub">Ela vale antes da ação padrão.</div>', [
-      {ic:'🕐', n:'Em certo horário', d:'Você escolhe de que hora a que hora', click:()=>{
-        fecharSheet(); r.exc = r.exc||[]; r.exc.push({t:'hora', de:20, ate:6, faz:'nada'}); editarRegra(i);
-      }},
-      {ic:'🧺', n:'Despensa baixa', d:'Quando não tem comida em casa', click:()=>{
-        fecharSheet(); r.exc = r.exc||[]; r.exc.push({t:'despensa', v:12, faz:'nada'}); editarRegra(i);
-      }},
-      {ic:'💰', n:'Pouco dinheiro', d:'Quando a conta está apertada', click:()=>{
-        fecharSheet(); r.exc = r.exc||[]; r.exc.push({t:'dinheiro', v:1000, faz:'nada'}); editarRegra(i);
-      }},
-      {ic:'📅', n:'Fim de semana', click:()=>{
-        fecharSheet(); r.exc = r.exc||[]; r.exc.push({t:'fds', faz:'nada'}); editarRegra(i);
-      }},
-      {ic:'📊', n:'Outra barra', d:'Ex.: só se o estresse estiver alto', click:()=>{
-        fecharSheet(); r.exc = r.exc||[]; r.exc.push({t:'barra', k:'estresse', v:70, maior:true, faz:'nada'}); editarRegra(i);
-      }},
+    const nova = tipo => {
+      fecharSheet();
+      r.exc = r.exc || [];
+      r.exc.push(tipo);
+      editarExcecao(i, r.exc.length-1);
+    };
+    sheet('<h2>Quando abrir exceção</h2><div class="sub">Ela vale antes da ação padrão. Você escolhe os detalhes no próximo passo.</div>', [
+      {ic:'🕐', n:'Em certo horário', d:'De que hora a que hora', click:()=>nova({t:'hora', de:20, ate:6, faz:'nada'})},
+      {ic:'🧺', n:'Despensa baixa', d:'Quando não tem comida em casa', click:()=>nova({t:'despensa', v:12, faz:'nada'})},
+      {ic:'💰', n:'Pouco dinheiro', d:'Quando a conta está apertada', click:()=>nova({t:'dinheiro', v:1000, faz:'nada'})},
+      {ic:'📅', n:'Fim de semana', click:()=>nova({t:'fds', faz:'nada'})},
+      {ic:'📊', n:'Outra barra', d:'Ex.: só se o estresse estiver alto', click:()=>nova({t:'barra', k:'estresse', v:70, maior:true, faz:'nada'})},
       {ic:'↩︎', n:'Cancelar', click:()=>{ fecharSheet(); editarRegra(i); }},
     ]);
   };
+}
+
+// editor da exceção: horário, valor, barra e a ação — tudo mexível
+function editarExcecao(iRegra, j){
+  const r = S.regras.vitais[iRegra];
+  const e = r.exc[j];
+  const opcoes = ACOES_POR_BARRA[r.k] || ['nada'];
+  const hh = n => String(n).padStart(2,'0')+'h';
+
+  let quando = '';
+  if(e.t === 'hora'){
+    quando = `
+      <div class="card">
+        <label class="f">Começa às <b id="exD">${hh(e.de)}</b></label>
+        <input type="range" id="exDR" min="0" max="23" value="${e.de}">
+        <label class="f">Vai até <b id="exA">${hh(e.ate)}</b></label>
+        <input type="range" id="exAR" min="0" max="24" value="${e.ate}">
+        <div class="meta" id="exAviso" style="margin-top:8px"></div>
+      </div>`;
+  } else if(e.t === 'despensa' || e.t === 'dinheiro'){
+    const max = e.t === 'dinheiro' ? 15000 : 100, passo = e.t === 'dinheiro' ? 250 : 5;
+    quando = `<div class="card">
+      <label class="f">${e.t==='dinheiro'?'Conta abaixo de':'Despensa abaixo de'} <b id="exV">${e.t==='dinheiro'?fmt(e.v):e.v}</b></label>
+      <input type="range" id="exVR" min="0" max="${max}" step="${passo}" value="${e.v}"></div>`;
+  } else if(e.t === 'barra'){
+    quando = `<div class="card">
+      <label class="f">Qual barra</label>
+      <div id="exBarras" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:4px"></div>
+      <label class="f">${e.maior?'Acima de':'Abaixo de'} <b id="exV">${e.v}</b></label>
+      <input type="range" id="exVR" min="5" max="95" value="${e.v}">
+      <div class="acts"><button class="btn gho" id="exInv">Trocar para ${e.maior?'abaixo de':'acima de'}</button></div>
+    </div>`;
+  } else {
+    quando = `<div class="card"><div class="meta">Vale em todo sábado e domingo. Não tem o que ajustar.</div></div>`;
+  }
+
+  const box = document.getElementById('sheetBox');
+  box.className = '';
+  box.innerHTML = `
+    <div class="sheetHead" style="padding:2px 0 10px"><h2>Exceção</h2>
+      <button class="fechar" id="exX" aria-label="Voltar">✕</button></div>
+    <div class="secTit" style="margin-top:0">Quando ela vale</div>
+    ${quando}
+    <div class="secTit">O que fazer nesse caso</div>
+    <div id="exAcoes"></div>`;
+  document.getElementById('sheet').classList.add('on');
+  document.getElementById('exX').onclick = () => { fecharSheet(); editarRegra(iRegra); };
+
+  const pinta = () => {
+    document.getElementById('exAcoes').innerHTML = opcoes.map(id =>
+      `<button class="opt" data-a="${id}" style="${id===e.faz?'box-shadow:inset 3px 0 0 var(--laranja)':''}">
+        <span class="ic">${(ACOES_AUTO[id]||{ic:'•'}).ic}</span>
+        <span class="b"><span class="n">${(ACOES_AUTO[id]||{n:id}).n}</span></span>
+        ${id===e.faz?'<span class="c">escolhida</span>':''}</button>`).join('');
+    document.querySelectorAll('#exAcoes [data-a]').forEach(x => x.onclick = () => { e.faz = x.dataset.a; pinta(); });
+  };
+  pinta();
+
+  if(e.t === 'hora'){
+    const dR = document.getElementById('exDR'), aR = document.getElementById('exAR');
+    const avisa = () => {
+      document.getElementById('exD').textContent = hh(e.de);
+      document.getElementById('exA').textContent = hh(e.ate);
+      document.getElementById('exAviso').innerHTML = e.de === e.ate
+        ? '<b style="color:var(--vermelho)">Começo e fim iguais: a exceção nunca vale.</b>'
+        : (e.de > e.ate
+          ? 'Atravessa a meia-noite: vale das <b>'+hh(e.de)+'</b> até <b>'+hh(e.ate)+'</b> do dia seguinte.'
+          : 'Vale das <b>'+hh(e.de)+'</b> às <b>'+hh(e.ate)+'</b> do mesmo dia.');
+    };
+    dR.oninput = () => { e.de = +dR.value; avisa(); };
+    aR.oninput = () => { e.ate = +aR.value; avisa(); };
+    avisa();
+  } else if(e.t === 'despensa' || e.t === 'dinheiro'){
+    const vR = document.getElementById('exVR');
+    vR.oninput = () => { e.v = +vR.value; document.getElementById('exV').textContent = e.t==='dinheiro'?fmt(e.v):e.v; };
+  } else if(e.t === 'barra'){
+    const vR = document.getElementById('exVR');
+    vR.oninput = () => { e.v = +vR.value; document.getElementById('exV').textContent = e.v; };
+    document.getElementById('exInv').onclick = () => { e.maior = !e.maior; editarExcecao(iRegra, j); };
+    const bx = document.getElementById('exBarras');
+    bx.innerHTML = BARRAS_AUTO.map(b =>
+      `<button class="btn ${b.k===e.k?'pri':'gho'}" data-b="${b.k}" style="padding:5px 8px;font-size:11px">${b.ic} ${b.n}</button>`).join('');
+    bx.querySelectorAll('[data-b]').forEach(x => x.onclick = () => { e.k = x.dataset.b; editarExcecao(iRegra, j); });
+  }
 }
 
 /* ---------- render das telas ---------- */
