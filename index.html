@@ -980,14 +980,17 @@ function pensarAuto(){
 
     const b = BARRAS_AUTO.find(x => x.k === r.k);
     const val = valorVital(r.k);
-    if(!(val < r.v)) continue;
+
+    // a exceção vem antes do gatilho: ela pode mudar o próprio número que dispara
+    const exc = (r.exc||[]).find(condicaoBate);
+    const gat = (exc && exc.gat != null) ? exc.gat : r.v;
+    if(!(val < gat)) continue;
 
     const critico = criticoDe(b, val);
     if(ocupadoAgora && !critico && !leve && !r.interrompe) continue;
     // corta o ioiô: mesma regra não volta a mandar antes de 2h de jogo
     if(r.ultima != null && S.t - r.ultima < 2) continue;
 
-    const exc = (r.exc||[]).find(condicaoBate);
     const acao = exc ? exc.faz : r.faz;
     if(acao === 'nada') continue;
 
@@ -996,7 +999,7 @@ function pensarAuto(){
     if(!podeAcao(acao)) continue;                            // sem dinheiro ou sem despensa
 
     const motivo = b.n.toLowerCase() + ' em ' + Math.round(val) + (critico ? ' (no vermelho)' : '') +
-                   (exc ? ' · exceção: ' + nomeCondicao(exc) : '');
+                   (exc ? ' · exceção: ' + nomeCondicao(exc) + (exc.gat != null ? ' (gatilho ' + exc.gat + ')' : '') : '');
     if(ocupadoAgora){
       const antes = S.fazendo.label;
       S.fazendo = null;
@@ -2753,7 +2756,9 @@ function renderAuto(){
         <span class="pill ${agora?'o':''}">${val}</span></div>
       <div class="meta">Faz: <b>${(ACOES_AUTO[r.faz]||{n:r.faz}).n}</b></div>
       <div class="meta">Meta: <b>${meta}</b>${folga < meta ? ` · falta <b style="color:var(--laranja)">${Math.round(meta-folga)}</b> pra chegar lá` : ' · <b style="color:var(--verde)">alcançada</b>'}</div>
-      ${(r.exc||[]).map(e => `<div class="meta" style="color:var(--texto3)">Mas se ${nomeCondicao(e)} → <b style="color:var(--texto2)">${(ACOES_AUTO[e.faz]||{n:e.faz}).n}</b></div>`).join('')}
+      ${(r.exc||[]).map(e => `<div class="meta" style="color:var(--texto3)">Mas se ${nomeCondicao(e)} → ${
+        e.gat != null ? `dispara <b style="color:var(--laranja)">abaixo de ${e.gat}</b> e faz ` : ''
+      }<b style="color:var(--texto2)">${(ACOES_AUTO[e.faz]||{n:e.faz}).n}</b></div>`).join('')}
       <div class="meta" style="color:${r.interrompe?'var(--laranja)':'var(--texto3)'}">${r.interrompe
         ? 'Larga qualquer tarefa pra atender isso.'
         : 'Larga tarefa leve sempre, e qualquer tarefa quando a barra estiver no vermelho.'}</div>
@@ -2954,7 +2959,7 @@ function editarRegra(i){
     const el = document.getElementById('erExc');
     // atributo em MINÚSCULA: o dataset converte data-eE em dataset.ee e o índice vinha NaN
     el.innerHTML = (r.exc||[]).length ? r.exc.map((e,j) =>
-      `<div class="card"><div class="meta">Se <b>${nomeCondicao(e)}</b> → <b>${(ACOES_AUTO[e.faz]||{n:e.faz}).n}</b></div>
+      `<div class="card"><div class="meta">Se <b>${nomeCondicao(e)}</b> → ${e.gat!=null?`gatilho <b style="color:var(--laranja)">${e.gat}</b> e `:''}<b>${(ACOES_AUTO[e.faz]||{n:e.faz}).n}</b></div>
        <div class="acts"><button class="btn" data-edit="${j}">Editar</button>
        <button class="btn dan" data-del="${j}">Remover</button></div></div>`).join('')
       : '<div class="vazio">Nenhuma. A ação padrão vale sempre.</div>';
@@ -3029,10 +3034,33 @@ function editarExcecao(iRegra, j){
       <button class="fechar" id="exX" aria-label="Voltar">✕</button></div>
     <div class="secTit" style="margin-top:0">Quando ela vale</div>
     ${quando}
+
+    <div class="secTit">Gatilho nesse caso</div>
+    <div class="card" id="exGat"></div>
+
     <div class="secTit">O que fazer nesse caso</div>
     <div id="exAcoes"></div>`;
   document.getElementById('sheet').classList.add('on');
   document.getElementById('exX').onclick = () => { fecharSheet(); editarRegra(iRegra); };
+
+  // a exceção pode ter gatilho próprio: de noite você aguenta menos cansaço antes de ir dormir
+  const pintaGat = () => {
+    const el = document.getElementById('exGat');
+    if(e.gat == null){
+      el.innerHTML = `<div class="meta">Usa o mesmo da regra: dispara <b>abaixo de ${r.v}</b>.</div>
+        <div class="acts"><button class="btn gho" id="exGon">Usar um gatilho só pra esta exceção</button></div>`;
+      document.getElementById('exGon').onclick = () => { e.gat = Math.min(95, r.v + 20); pintaGat(); };
+    } else {
+      el.innerHTML = `<label class="f">Dispara abaixo de <b id="exGv">${e.gat}</b></label>
+        <input type="range" id="exGr" min="5" max="95" value="${e.gat}">
+        <div class="meta" style="margin-top:6px;color:var(--texto3)">Fora desta exceção continua valendo o ${r.v} da regra. Está em ${Math.round(valorVital(r.k))} agora.</div>
+        <div class="acts"><button class="btn gho" id="exGoff">Voltar a usar o da regra</button></div>`;
+      const g = document.getElementById('exGr');
+      g.oninput = () => { e.gat = +g.value; document.getElementById('exGv').textContent = e.gat; };
+      document.getElementById('exGoff').onclick = () => { delete e.gat; pintaGat(); };
+    }
+  };
+  pintaGat();
 
   const pinta = () => {
     document.getElementById('exAcoes').innerHTML = opcoes.map(id =>
