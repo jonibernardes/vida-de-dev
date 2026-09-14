@@ -1443,12 +1443,15 @@ function chegarChamado(){
     }
     if(Math.random() > p) return;
 
-    const grande = Math.random() < (dias <= 10 ? 0.22 : 0.12);
+    // 9 em cada 10 chamados são de 1 a 2 horas; só 1 em 10 vira problemão de 3 a 4
+    const grande = Math.random() < 0.10;
     S.chamados.push({
       id: S.seq++, cliente: cli.cliente, classe: cli.classe, refId: cli.id,
-      horas: grande ? rnd(4,8) : rnd(0.5,2), feitas:0, aberto:S.t, grande, dias:0,
+      horas: grande ? rnd(3, 4) : rnd(0.8, 2), feitas:0, aberto:S.t, grande, dias:0,
       prazo: cli.paciencia,
-      desc: grande ? 'Deu problemão. Parou tudo do lado dele.' : pick(CHAMADOS_TXT),
+      desc: grande ? pick(['Deu problemão. Parou tudo do lado dele.',
+                           'O sistema travou no meio do expediente.',
+                           'Sumiram os dados de um mês inteiro, diz ele.']) : pick(CHAMADOS_TXT),
     });
     if(dias <= 30) cli.cota--;
     const c = S.chamados[S.chamados.length-1];
