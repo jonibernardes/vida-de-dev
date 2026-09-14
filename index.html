@@ -2777,8 +2777,17 @@ function renderAuto(){
     const T = CFG.tipos[tipo];
     numero('Preço · projeto ' + T.nome.toLowerCase(),
       'Percentual da referência, só para projetos de ' + fmt(T.pMin) + ' a ' + fmt(T.pMax) +
-      '. Abaixo de 100% fecha mais, mas você ganha menos.',
-      precoDoTipo(r, tipo), 50, 130, v => { r.precos[tipo] = v; renderAuto(); });
+      '. Abaixo de 100% fecha mais e você ganha menos. Bem acima, serve pra recusar esse porte sem desligar a regra.',
+      precoDoTipo(r, tipo), 50, 300,
+      v => { r.precos[tipo] = v; renderAuto(); },
+      v => {
+        const ch = chanceNoPreco(v);
+        const meio = Math.round((T.pMin + T.pMax)/2 * v/100);
+        const cor = ch >= 45 ? 'var(--verde)' : (ch >= 15 ? 'var(--laranja)' : 'var(--vermelho)');
+        return `Num projeto médio desse porte daria <b>${fmt(meio)}</b>.<br>
+          Chance de fechar: <b style="color:${cor}">${ch}%</b>` +
+          (ch <= 6 ? '<br><b style="color:var(--vermelho)">Nesse patamar ele praticamente nunca fecha: é assim que você recusa esse porte.</b>' : '');
+      });
   });
   el.querySelectorAll('[data-horas]').forEach(b => b.onclick = () => {
     const r = R.trabalho[+b.dataset.horas];
@@ -2787,15 +2796,29 @@ function renderAuto(){
   el.querySelectorAll('[data-edt]').forEach(b => b.onclick = () => editarRegra(+b.dataset.edt));
 }
 
-function numero(titulo, sub, valor, min, max, ok){
+function numero(titulo, sub, valor, min, max, ok, dica){
   sheet(`<h2>${titulo}</h2><div class="sub">${sub}</div>
     <label class="f">Valor: <b id="nvT">${valor}</b></label>
-    <input type="range" id="nvR" min="${min}" max="${max}" value="${valor}">`, [
+    <input type="range" id="nvR" min="${min}" max="${max}" value="${valor}">
+    ${dica ? '<div class="meta" id="nvD" style="margin-top:9px;line-height:1.5"></div>' : ''}`, [
     {ic:'✅', n:'Salvar', click:()=>{ const v=+document.getElementById('nvR').value; fecharSheet(); ok(v); }},
     {ic:'↩︎', n:'Cancelar', click:fecharSheet},
   ]);
   const r = document.getElementById('nvR');
-  r.oninput = () => document.getElementById('nvT').textContent = r.value;
+  const pinta = () => {
+    document.getElementById('nvT').textContent = r.value;
+    if(dica) document.getElementById('nvD').innerHTML = dica(+r.value);
+  };
+  r.oninput = pinta;
+  pinta();
+}
+
+// chance aproximada de fechar num dado percentual, com a fórmula que o jogo usa
+function chanceNoPreco(pct){
+  const r = pct/100;
+  let p = 1/(1 + Math.exp(7.32*(r-1)));
+  p = cl(p*(0.68 + 0.45*S.hab.vendas/100) + 0.20, .02, .96);
+  return Math.round(p*100);
 }
 
 function editarRegra(i){
