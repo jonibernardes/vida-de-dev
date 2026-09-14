@@ -709,8 +709,8 @@ const BARRAS_AUTO = [
   {k:'energia', n:'Energia', ic:'⚡'}, {k:'fome', n:'Fome', ic:'🍽'},
   {k:'higiene', n:'Higiene', ic:'🚿'}, {k:'animo', n:'Ânimo', ic:'🙂'},
   {k:'corpo', n:'Corpo', ic:'💪'}, {k:'casamento', n:'Casamento', ic:'❤️'},
-  {k:'estresse', n:'Estresse', ic:'😰', maior:true},
-  {k:'despensa', n:'Despensa', ic:'🧺'}, {k:'sujeira', n:'Sujeira', ic:'🧹', maior:true},
+  {k:'estresse', n:'Calma', ic:'😌'},
+  {k:'despensa', n:'Despensa', ic:'🧺'}, {k:'sujeira', n:'Casa limpa', ic:'🧹'},
 ];
 
 const TRABALHO_AUTO = [
@@ -732,10 +732,10 @@ function regrasPadrao(){
       {k:'fome', v:35, meta:80, ativa:true, faz:'comer:marmita',
        exc:[{t:'despensa', v:12, faz:'comer:burger'}, {t:'hora', de:0, ate:6, faz:'nada'}]},
       {k:'higiene', v:30, meta:75, ativa:true, faz:'banho', exc:[{t:'hora', de:0, ate:6, faz:'nada'}]},
-      {k:'estresse', v:70, meta:75, ativa:true, faz:'correr', exc:[{t:'hora', de:20, ate:6, faz:'tv'}]},
+      {k:'estresse', v:30, meta:75, ativa:true, faz:'correr', exc:[{t:'hora', de:20, ate:6, faz:'tv'}]},
       {k:'animo', v:35, meta:70, ativa:true, faz:'correr', exc:[{t:'hora', de:20, ate:6, faz:'tv'}]},
       {k:'despensa', v:15, meta:60, ativa:true, faz:'mercado', exc:[{t:'hora', de:21, ate:8, faz:'nada'}]},
-      {k:'sujeira', v:70, meta:70, ativa:true, faz:'limpar', exc:[]},
+      {k:'sujeira', v:30, meta:70, ativa:true, faz:'limpar', exc:[]},
       {k:'casamento', v:45, meta:75, ativa:true, faz:'taniaCafe', exc:[{t:'hora', de:0, ate:7, faz:'nada'}]},
       {k:'corpo', v:40, meta:70, ativa:true, faz:'correr', exc:[{t:'hora', de:20, ate:6, faz:'nada'}]},
     ],
@@ -746,9 +746,25 @@ function regrasPadrao(){
       {id:'codar', ativa:true, horas:3},
     ],
     // não existe horário de trabalho: toda hora é hora.
-    // sem trabalho na fila, ele cuida da barra mais baixa até todas passarem de 80.
+    // sem trabalho na fila, ele cuida da barra mais distante da meta dela.
     confortavel: 80,
+    v2: true,      // todas as barras já contam com 100 = bom
   };
+}
+
+// partida antiga guardava estresse e sujeira ao contrário: vira os números uma vez só
+function migrarRegras(){
+  const R = S.regras;
+  if(!R || R.v2) return;
+  R.vitais.forEach(r => {
+    if(r.k === 'estresse' || r.k === 'sujeira') r.v = 100 - r.v;
+    (r.exc||[]).forEach(e => {
+      if(e.t === 'barra' && (e.k === 'estresse' || e.k === 'sujeira')){
+        e.v = 100 - e.v; e.maior = !e.maior;
+      }
+    });
+  });
+  R.v2 = true;
 }
 
 const GRUPOS_ATIVIDADE = {
@@ -767,7 +783,7 @@ function condicaoBate(e){
     case 'despensa': return S.despensa < e.v;
     case 'dinheiro': return S.dinheiro < e.v;
     case 'fds':      return fds();
-    case 'barra':    return e.maior ? S.b[e.k] > e.v : S.b[e.k] < e.v;
+    case 'barra':    return e.maior ? valorVital(e.k) > e.v : valorVital(e.k) < e.v;
     case 'fazendo': {
       if(!S.fazendo) return false;
       const g = GRUPOS_ATIVIDADE[e.k];
@@ -812,8 +828,8 @@ function registrarAuto(o, porque){
   if(S.autoLog.length > 40) S.autoLog.pop();
 }
 
-// quanto de folga uma barra tem: nas invertidas, folga é o inverso do valor
-const folgaDa = (b, val) => b.maior ? 100 - val : val;
+// todas as barras já vêm com 100 = bom, então a folga é o próprio valor
+const folgaDa = (b, val) => val;
 // a meta é de cada barra; sem meta própria, cai no padrão da partida
 const metaDa = r => r.meta != null ? r.meta : (S.regras.confortavel || 80);
 
@@ -915,7 +931,7 @@ function tentarTrabalhoInterno(){
 // coisas que ele larga sem pensar duas vezes
 const ATIVIDADE_LEVE = ['tv','insta','parado'];
 // no vermelho de verdade, larga qualquer coisa
-const criticoDe = (b, val) => b.maior ? val >= 85 : val <= 18;
+const criticoDe = (b, val) => val <= 18;
 
 /* O cérebro. Com ele ocupado, a regra ainda vale:
    - barra no vermelho: larga o que estiver fazendo
@@ -926,6 +942,7 @@ function pensarAuto(){
   if(!S.auto) return;
   if(!S.regras) S.regras = regrasPadrao();
   if(S.regras.confortavel === undefined) S.regras.confortavel = 80;   // partida salva antes disso
+  migrarRegras();
   if(involuntario()) return;
 
   const ocupadoAgora = !!S.fazendo;
@@ -936,7 +953,7 @@ function pensarAuto(){
 
     const b = BARRAS_AUTO.find(x => x.k === r.k);
     const val = valorVital(r.k);
-    if(!(b.maior ? val > r.v : val < r.v)) continue;
+    if(!(val < r.v)) continue;
 
     const critico = criticoDe(b, val);
     if(ocupadoAgora && !critico && !leve && !r.interrompe) continue;
@@ -2390,11 +2407,18 @@ const VITAIS = [
   {k:'animo',     ic:'🙂', n:'Ânimo'},
   {k:'corpo',     ic:'💪', n:'Corpo'},
   {k:'casamento', ic:'❤️', n:'Casamento'},
-  {k:'estresse',  ic:'😰', n:'Estresse', invertido:true},
+  {k:'estresse',  ic:'😌', n:'Calma'},
   {k:'despensa',  ic:'🧺', n:'Despensa', casa:true},
-  {k:'sujeira',   ic:'🧹', n:'Casa limpa', casa:true, invertido:true},
+  {k:'sujeira',   ic:'🧹', n:'Casa limpa', casa:true},
 ];
-const valorVital = k => (k === 'despensa' || k === 'sujeira') ? S[k] : S.b[k];
+/* Todas as barras seguem a mesma regra: 100 é bom, 0 é ruim.
+   Por dentro o jogo guarda estresse e sujeira ao contrário, então invertemos aqui. */
+const valorVital = k => {
+  if(k === 'despensa') return S.despensa;
+  if(k === 'sujeira')  return 100 - S.sujeira;
+  if(k === 'estresse') return 100 - S.b.estresse;
+  return S.b[k];
+};
 // o que mexe em cada barra, com os numeros que o jogo usa de verdade
 const AJUDA = {
   energia: {
@@ -2461,27 +2485,27 @@ const AJUDA = {
     baixo: 'Vazia, você só tem delivery: caro, e derruba o corpo toda vez.',
   },
   sujeira: {
-    onde: 'Pia da cozinha, ou o botão Limpar',
-    sobe: [['Limpar a casa', 'zera em 1 hora']],
-    desce: [['O tempo passando', '+1,4 de sujeira por hora']],
-    baixo: 'Passando de 60 de sujeira, seu ânimo cai 0,7 a mais por hora. Passando de 92, você começa a limpar sozinho.',
-    invertido: true,
+    onde: 'Pia da cozinha, ou tocando na cozinha',
+    sobe: [['Limpar a casa', 'volta a 100 em 1 hora']],
+    desce: [['O tempo passando', '−1,4 por hora']],
+    baixo: 'Abaixo de 40 o seu ânimo cai 0,7 a mais por hora. Abaixo de 8, você começa a limpar sozinho, queira ou não.',
   },
   estresse: {
-    onde: 'Corrida, TV e resolver o que está aberto',
-    sobe: [['Cada projeto atrasado', '+2 por dia'], ['Cada chamado sem resposta', '+3 por dia'],
-           ['A cada R$ 5 mil de dívida', '+1 por dia'], ['Cada reclamação aberta', '+5 por dia'],
-           ['Cobrança do agiota', '+20'], ['Faltar dinheiro no dia 5', '+12'],
-           ['Responder o Reclame Aqui', '+5'], ['Cada follow-up no zap', '+1']],
-    desce: [['Sair pra correr', '−8'], ['Tempo com a Tania', '−10'], ['Ver TV', '−4'],
-            ['Noite dormida', '−0,6 por hora']],
-    baixo: 'Acima de 85 você entra em ansiedade: rende 15% menos e dorme mal. Esta é a única barra em que número alto é ruim.',
-    invertido: true,
+    onde: 'Corrida, TV, tempo com a Tania e resolver o que está aberto',
+    sobe: [['Sair pra correr', '+14'], ['Tempo com a Tania', '+10'], ['Ver TV', '+4'],
+           ['Cada hora dormida', '+0,9'], ['Entregar e fechar o que está aberto', 'para a sangria']],
+    desce: [['Cada hora trabalhando', '−0,40'], ['Cada projeto atrasado', '−0,50 por hora e −4 por dia'],
+            ['Cada chamado aberto', '−0,12 por hora, −3 por dia'],
+            ['Chamado que passou do prazo', '−8 por dia'],
+            ['Cada reclamação aberta', '−7 por dia'], ['A cada R$ 2,5 mil de dívida', '−1 por dia'],
+            ['Cobrança do agiota', '−20'], ['Faltar dinheiro no dia 5', '−12'],
+            ['Energia abaixo de 30', '−0,35 por hora'], ['Fome abaixo de 25', '−0,30 por hora']],
+    baixo: 'Abaixo de 15 você entra em ansiedade: rende 15% menos e dorme mal. Correr é o jeito mais rápido de recuperar.',
   },
 };
 
-function corVital(v, invertido){
-  const b = invertido ? 100-v : v;
+function corVital(v){
+  const b = v;
   return b >= 60 ? 'var(--verde)' : (b >= 30 ? 'var(--laranja)' : 'var(--vermelho)');
 }
 function pendencias(){
@@ -2528,7 +2552,7 @@ function atualizarHud(){
 
   const vt = document.getElementById('vitais');
   const novo = VITAIS.map(v => {
-    const val = Math.round(valorVital(v.k)), c = corVital(val, v.invertido);
+    const val = Math.round(valorVital(v.k)), c = corVital(val);
     const temBase = CFG.comBasal.includes(v.k);
     const bs = temBase ? Math.round(S.base[v.k]) : null;
     return `<button data-v="${v.k}" title="${v.n}"><i>${v.ic}</i><u style="color:${c}">${val}</u>` +
@@ -2684,10 +2708,10 @@ function renderAuto(){
   R.vitais.forEach((r, i) => {
     const b = BARRAS_AUTO.find(x => x.k === r.k);
     const val = Math.round(valorVital(r.k));
-    const agora = b.maior ? val > r.v : val < r.v;
+    const agora = val < r.v;
     const meta = metaDa(r), folga = folgaDa(b, val);
     h += `<div class="card ${r.ativa ? (agora?'warn':'') : ''}" style="${r.ativa?'':'opacity:.45'}">
-      <div class="cardTop"><h3>${b.ic} ${b.n} ${b.maior?'acima de':'abaixo de'} ${r.v}</h3>
+      <div class="cardTop"><h3>${b.ic} ${b.n} abaixo de ${r.v}</h3>
         <span class="pill ${agora?'o':''}">${val}</span></div>
       <div class="meta">Faz: <b>${(ACOES_AUTO[r.faz]||{n:r.faz}).n}</b></div>
       <div class="meta">Meta: <b>${meta}</b>${folga < meta ? ` · falta <b style="color:var(--laranja)">${Math.round(meta-folga)}</b> pra chegar lá` : ' · <b style="color:var(--verde)">alcançada</b>'}</div>
@@ -2848,7 +2872,7 @@ function editarRegra(i){
     <div class="sheetHead" style="padding:2px 0 10px"><h2>${b.ic} ${b.n}</h2>
       <button class="fechar" id="erX" aria-label="Fechar">✕</button></div>
     <div class="secTit" style="margin-top:0">Quando disparar</div>
-    <div class="card"><label class="f">${b.maior?'Acima de':'Abaixo de'} <b id="erV">${r.v}</b></label>
+    <div class="card"><label class="f">Abaixo de <b id="erV">${r.v}</b></label>
       <input type="range" id="erR" min="5" max="95" value="${r.v}">
       <div class="meta" style="margin-top:6px;color:var(--texto3)">Abaixo disso ele age, mesmo tendo outra coisa pra fazer.</div></div>
 
@@ -3315,6 +3339,8 @@ const BARRAS = [
   {k:'animo', n:'Ânimo', c:'#4CAF7D', baixo:'Abaixo de 10 por dois dias você trava de vez.'},
   {k:'corpo', n:'Corpo', c:'#E0503A', baixo:'Abaixo de 40 sua energia máxima cai.'},
   {k:'casamento', n:'Casamento', c:'#E07A9B', baixo:'Abaixo de 30 ela cobra, e cobra caro.'},
+  {k:'estresse', n:'Calma', c:'#8E6BD9', baixo:'Abaixo de 15 você entra em ansiedade.'},
+  {k:'sujeira', n:'Casa limpa', c:'#4CAF7D', baixo:'Abaixo de 40 o ânimo cai mais rápido.'},
 ];
 // quanto a fila de trabalho está tirando do ânimo neste momento
 function cargaAgora(){
@@ -3337,8 +3363,8 @@ function cargaAgora(){
 function abrirVital(k){
   const v = VITAIS.find(x => x.k === k), a = AJUDA[k];
   if(!v || !a) return;
-  const val = Math.round(valorVital(k)), c = corVital(val, v.invertido);
-  const ruim = v.invertido ? val > 85 : val < 30;
+  const val = Math.round(valorVital(k)), c = corVital(val);
+  const ruim = val < 30;
   const temBase = CFG.comBasal.includes(k);
   const bs = temBase ? Math.round(S.base[k]) : null;
 
@@ -3377,11 +3403,11 @@ function abrirVital(k){
       Ação de hoje mexe no número da esquerda; repetição mexe na base.
     </div>` : ''}
 
-    <div class="secTit" style="margin-top:0">${v.invertido ? 'O que derruba' : 'O que melhora'}</div>
-    ${lista(v.invertido ? a.desce : a.sobe, 'up')}
+    <div class="secTit" style="margin-top:0">O que melhora</div>
+    ${lista(a.sobe, 'up')}
 
-    <div class="secTit">${v.invertido ? 'O que faz subir' : 'O que piora'}</div>
-    ${lista(v.invertido ? a.sobe : a.desce, 'dn')}
+    <div class="secTit">O que piora</div>
+    ${lista(a.desce, 'dn')}
 
     ${k === 'animo' ? cargaAgora() : ''}
 
@@ -3422,15 +3448,12 @@ function renderVoce(){
 
   h += `<div class="secTit">Barras <span class="n">toque pra ver o que mexe</span></div><div class="card"><div class="bars">`;
   BARRAS.forEach(b => {
-    const v = S.b[b.k];
+    const v = valorVital(b.k);
     h += `<button class="bar" data-v="${b.k}" style="width:100%;text-align:left">
       <div class="l"><span>${b.n} ›</span><span>${Math.round(v)}</span></div>
       <div class="t"><i style="width:${v}%;background:${v<25?'#E0503A':b.c}"></i></div>
       ${v<30?`<div class="meta" style="margin-top:4px;color:var(--vermelho);font-size:11px">${b.baixo}</div>`:''}</button>`;
   });
-  h += `<button class="bar" data-v="estresse" style="width:100%;text-align:left">
-    <div class="l"><span>Estresse ›</span><span>${Math.round(S.b.estresse)}</span></div>
-    <div class="t"><i style="width:${S.b.estresse}%;background:${S.b.estresse>85?'#E0503A':'#8E6BD9'}"></i></div></button>`;
   h += `</div></div>`;
 
   h += `<div class="secTit">Habilidades</div><div class="card"><div class="bars">
