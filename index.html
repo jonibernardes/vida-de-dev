@@ -157,7 +157,7 @@ h1,h2,h3{font-family:'Bricolage Grotesque',system-ui,sans-serif; margin:0; text-
   font-size:8.5px; color:rgba(255,255,255,.55); text-align:center; line-height:1.35;
   background:rgba(35,46,74,.8); border-radius:10px; padding:7px 5px;
 }
-#v-zap .pad, #v-grana .pad, #v-fama .pad{padding-right:76px}
+#v-zap .pad, #v-grana .pad, #v-fama .pad, #v-auto .pad{padding-right:76px}
 #auto-aviso{
   position:absolute; left:8px; right:82px; top:8px; z-index:22;
   background:rgba(76,175,125,.92); color:#0B2018; border-radius:11px;
@@ -499,7 +499,9 @@ const CFG = {
     ruim:   {p:0.25, custoMin:90, custoMax:130, volMin:.30, volMax:.60,  mixA:.10, mixB:.45},
   },
   noShow: 0.28,
-  followMax: 3, followBonus: 0.10, followHoras: 0.25,
+  // o follow-up MULTIPLICA a chance em vez de somar um valor fixo.
+  // somando, um preço absurdo ainda fechava 1 em 5 e não dava pra recusar pelo preço.
+  followMax: 3, followBonus: 0.38, followHoras: 0.25,
 
   // o atual persegue o basal: 1,2% da diferença por hora
   puxaBasal: 0.012,
@@ -831,7 +833,8 @@ function cuidarDaMaisBaixa(){
     const exc = (c.r.exc||[]).find(condicaoBate);
     const acao = exc ? exc.faz : c.r.faz;
     if(acao === 'nada' || !podeAcao(acao)) continue;
-    if(rodarAcaoAuto(acao, 'adiantando · ' + c.b.n.toLowerCase() + ' em ' + Math.round(c.val))) return true;
+    if(c.r.ultima != null && S.t - c.r.ultima < 2) continue;
+    if(rodarAcaoAuto(acao, 'adiantando · ' + c.b.n.toLowerCase() + ' em ' + Math.round(c.val))){ c.r.ultima = S.t; return true; }
   }
   return false;
 }
@@ -934,6 +937,8 @@ function pensarAuto(){
 
     const critico = criticoDe(b, val);
     if(ocupadoAgora && !critico && !leve && !r.interrompe) continue;
+    // corta o ioiô: mesma regra não volta a mandar antes de 2h de jogo
+    if(r.ultima != null && S.t - r.ultima < 2) continue;
 
     const exc = (r.exc||[]).find(condicaoBate);
     const acao = exc ? exc.faz : r.faz;
@@ -948,8 +953,8 @@ function pensarAuto(){
     if(ocupadoAgora){
       const antes = S.fazendo.label;
       S.fazendo = null;
-      if(rodarAcaoAuto(acao, motivo + ' · largou: ' + antes)) return;
-    } else if(rodarAcaoAuto(acao, motivo)) return;
+      if(rodarAcaoAuto(acao, motivo + ' · largou: ' + antes)){ r.ultima = S.t; return; }
+    } else if(rodarAcaoAuto(acao, motivo)){ r.ultima = S.t; return; }
   }
 
   if(S.fazendo) return;
@@ -1685,10 +1690,10 @@ function chanceFechar(l){
   const r = l.orcamento / l.teto;
   let base = 1/(1 + Math.exp(7.32*(r-1)));
   base *= (0.68 + 0.45*S.hab.vendas/100);
-  base += l.follows*CFG.followBonus;
-  if(l.frio) base -= 0.15;
-  base += repIndice()*0.08;
-  return cl(base, .02, .96);
+  base *= (1 + l.follows*CFG.followBonus);
+  if(l.frio) base *= 0.7;
+  base *= (1 + repIndice()*0.18);
+  return cl(base, .01, .96);
 }
 
 function enviarOrcamento(l, v){
@@ -2781,12 +2786,12 @@ function renderAuto(){
       precoDoTipo(r, tipo), 50, 300,
       v => { r.precos[tipo] = v; renderAuto(); },
       v => {
-        const ch = chanceNoPreco(v);
+        const ch = chanceNoPreco(v, 0), chF = chanceNoPreco(v, 3);
         const meio = Math.round((T.pMin + T.pMax)/2 * v/100);
-        const cor = ch >= 45 ? 'var(--verde)' : (ch >= 15 ? 'var(--laranja)' : 'var(--vermelho)');
+        const cor = chF >= 45 ? 'var(--verde)' : (chF >= 12 ? 'var(--laranja)' : 'var(--vermelho)');
         return `Num projeto médio desse porte daria <b>${fmt(meio)}</b>.<br>
-          Chance de fechar: <b style="color:${cor}">${ch}%</b>` +
-          (ch <= 6 ? '<br><b style="color:var(--vermelho)">Nesse patamar ele praticamente nunca fecha: é assim que você recusa esse porte.</b>' : '');
+          Fecha de cara em <b style="color:${cor}">${ch}%</b> dos casos, e em <b style="color:${cor}">${chF}%</b> depois de cobrar 3 vezes no zap.` +
+          (chF <= 6 ? '<br><b style="color:var(--vermelho)">Aqui ele praticamente nunca fecha: é assim que você recusa esse porte sem desligar a regra.</b>' : '');
       });
   });
   el.querySelectorAll('[data-horas]').forEach(b => b.onclick = () => {
@@ -2814,11 +2819,13 @@ function numero(titulo, sub, valor, min, max, ok, dica){
 }
 
 // chance aproximada de fechar num dado percentual, com a fórmula que o jogo usa
-function chanceNoPreco(pct){
+function chanceNoPreco(pct, follows){
   const r = pct/100;
   let p = 1/(1 + Math.exp(7.32*(r-1)));
-  p = cl(p*(0.68 + 0.45*S.hab.vendas/100) + 0.20, .02, .96);
-  return Math.round(p*100);
+  p *= (0.68 + 0.45*S.hab.vendas/100);
+  p *= (1 + (follows||0)*CFG.followBonus);
+  p *= (1 + repIndice()*0.18);
+  return Math.round(cl(p, .01, .96)*100);
 }
 
 function editarRegra(i){
