@@ -930,7 +930,7 @@ function pensarAuto(){
 /* Ação que rende ao longo do tempo, não só no fim.
    Comer 40 minutos sobe a fome aos poucos: aos 20 minutos metade já entrou.
    Sem isso o jogo achava que você ainda estava faminto no meio da refeição. */
-const CONTINUAS = ['comer','banho','correr','mercado','limpar','tv','tania','limpezaTania'];
+const CONTINUAS = ['comer','banho','correr','mercado','limpar','tv','tania','limpezaTania','carona'];
 
 function totaisDaAcao(tipo, d){
   const h = hDia();
@@ -950,6 +950,7 @@ function totaisDaAcao(tipo, d){
     case 'tania':   return {casamento:(d&&d.grande?12:6), baseCasamento:(d&&d.grande?2:1),
                             estresse:-10, animo:6};
     case 'limpezaTania': return {casamento:10, baseCasamento:3, energia:-30};
+    case 'carona':       return {casamento:10, baseCasamento:1, energia:-14, estresse:-3};
     default: return {};
   }
 }
@@ -995,6 +996,7 @@ function pararAcao(){
   if(!S.fazendo) return;
   if(S.auto) return toast('No piloto automático você só assiste.','x');
   // o que o corpo e a cabeça começaram sozinhos, você não desliga no botão
+  if(S.fazendo.compromisso) return toast('Você se comprometeu. Vai até o fim.','x');
   if(S.fazendo.sozinho) return toast('Isso não para porque você quer. Vai passar sozinho.','x');
   const f = S.fazendo;
   S.fazendo = null;
@@ -1040,7 +1042,9 @@ function concluir(f){
     case 'tania':
       toast('Tempo com a Tania. Ela reparou.','v'); break;
     case 'limpezaTania':
-      toast('4 horas de limpeza. O corpo sentiu.','x'); break;
+      toast('4 horas de limpeza com a Tania. O corpo sentiu, o casamento agradeceu.','x'); break;
+    case 'carona':
+      toast('Trouxe a Tania em casa. Dormiu tarde.','x'); break;
     case 'curso':
       S.hab.execucao = cl(S.hab.execucao+CFG.curso.ganho,0,100);
       toast('Curso terminado. Execução +'+CFG.curso.ganho+'.','v'); break;
@@ -1516,18 +1520,26 @@ function reclamar(cliente, motivo){
 }
 
 /* ---------------- eventos ---------------- */
+/* Compromisso: começa na hora, roda até o fim e não abre escolha nenhuma.
+   Enquanto ele acontece, todo gatilho do piloto fica suspenso. */
+function compromisso(tipo, label, sub, horas, dados, txt){
+  S.fazendo = {tipo, label, sub, ini:S.t, fim:S.t+horas, dados:dados||{},
+               sozinho:true, compromisso:true, dur:Math.max(.01, horas),
+               total: totaisDaAcao(tipo, dados||{}), andado:0};
+  toast(txt, 'x', 8000);
+  render();
+}
+
 const EVENTOS = [
   {id:'carro', t:'O carro pifou', d:'Barulho estranho, luz no painel. Vai ter que levar na oficina.',
    f:()=>{ const c = Math.round(rnd(400,2000)); S.dinheiro -= c; ex('Oficina', -c);
      S.b.estresse=cl(S.b.estresse+8,0,100); return 'Oficina: '+fmt(c)+' e meio dia perdido.'; }, horas:4},
-  {id:'tania_balada', t:'A Tania precisa de carona', d:'Vai sair com as amigas. Alguém tem que buscar depois.',
-   escolha:true, sim:'Ir buscar (1h30, madrugada)', nao:'Deixar ela se virar',
-   fSim:()=>{ S.b.casamento=cl(S.b.casamento+10,0,100); S.b.energia=cl(S.b.energia-14,0,100); return 'Você buscou. Dormiu tarde.'; },
-   fNao:()=>{ S.b.casamento=cl(S.b.casamento-14,0,100); return 'Ficou um clima.'; }},
-  {id:'limpeza', t:'Ajudar a Tania na limpeza', d:'Serviço de 4 horas. Ela conta com você.',
-   escolha:true, sim:'Ir junto (4h)', nao:'Não dá, tenho projeto',
-   fSim:()=>{ S.b.casamento=cl(S.b.casamento+18,0,100); S.b.energia=cl(S.b.energia-30,0,100); return 'Quatro horas de faxina. Voltou moído.'; },
-   fNao:()=>{ S.b.casamento=cl(S.b.casamento-12,0,100); S.b.estresse=cl(S.b.estresse+5,0,100); return 'Ela foi sozinha.'; }},
+  {id:'tania_balada', t:'A Tania precisa de carona', d:'Vai sair com as amigas.',
+   compromisso:()=>compromisso('carona','Buscando a Tania','ela chamou, você vai', 1.5, {},
+     '<b>A Tania chamou pra buscar.</b> Você foi. Volta tarde, e até lá nada mais acontece.')},
+  {id:'limpeza', t:'Ajudar a Tania na limpeza', d:'Serviço de 4 horas.',
+   compromisso:()=>compromisso('limpezaTania','Ajudando a Tania','serviço de 4 horas', 4, {},
+     '<b>A Tania chamou pra limpeza.</b> Quatro horas, e você vai até o fim. Todo o resto espera.')},
   {id:'net', t:'A internet caiu', d:'Sem net, sem trabalho. Suporte da operadora é aquilo.',
    f:()=>{ return 'Voltou depois de umas horas. Nada feito nesse tempo.'; }, horas:3},
   {id:'gripe', t:'Você acordou gripado', d:'Dois dias arrastados.',
@@ -1548,7 +1560,22 @@ const EVENTOS = [
 
 function sortearEvento(){
   const e = pick(EVENTOS);
+
+  // compromisso não pergunta: começa e vai até o fim
+  if(e.compromisso){
+    if(involuntario()) return;          // já está em outro compromisso
+    e.compromisso();
+    return;
+  }
+
   if(e.escolha){
+    // no piloto automático ninguém está lá pra responder: ele aceita e segue
+    if(S.auto){
+      const r = e.fSim();
+      registrarAuto('✅ '+e.t, r);
+      toast('<b>'+e.t+'.</b> '+r, 'x', 7000);
+      return;
+    }
     sheet(`<h2>${e.t}</h2><div class="sub">${e.d}</div>`, [
       {ic:'✅', n:e.sim, click:()=>{ const r = e.fSim(); fecharSheet(); toast(r,'v'); render(); }},
       {ic:'🚫', n:e.nao, click:()=>{ const r = e.fNao(); fecharSheet(); toast(r,'x'); render(); }},
@@ -2052,7 +2079,7 @@ function portaSaida(){
 /* ---------- o que está acontecendo, desenhado ---------- */
 const ICONE_ACAO = {
   dormir:'💤', comer:'🍽️', banho:'🚿', correr:'🏃', mercado:'🛒', limpar:'🧹', tv:'📺',
-  tania:'❤️', limpezaTania:'🧽', curso:'🎓', insta:'📱', parado:'😶',
+  tania:'❤️', limpezaTania:'🧽', carona:'🚗', curso:'🎓', insta:'📱', parado:'😶',
   projeto:'⌨️', chamado:'🛠️', reuniao:'🤝', follow:'💬', avaliacao:'⭐', responderRA:'✍️',
 };
 
@@ -2101,7 +2128,7 @@ function animacaoDaAcao(){
       }
       cx.globalAlpha = 1;
       break;
-    case 'tania':
+    case 'tania': case 'carona':
       sobem(x, y, 4, .4, (px,py,t) => {
         const s = 5 - t*2;
         cx.fillStyle = 'rgba(224,122,155,.95)';
@@ -2201,7 +2228,7 @@ function posBoneco(){
   const mapa = {dormir:'cama', comer:'mesaCoz', banho:'box', tv:'sofa', limpar:'sofa',
     projeto:'mesaTrab', reuniao:'mesaTrab', follow:'mesaTrab', chamado:'mesaTrab',
     avaliacao:'mesaTrab', responderRA:'mesaTrab', curso:'mesaTrab', tania:'sofa',
-    correr:'porta', mercado:'porta', limpezaTania:'porta', insta:'sofa'};
+    correr:'porta', mercado:'porta', limpezaTania:'porta', carona:'porta', insta:'sofa'};
   const id = f ? (mapa[f.tipo]||'mesaTrab') : 'mesaTrab';
   const m = MOVEIS.find(x => x.id === id) || MOVEIS[5];
   if(id === 'cama')     return {x:m.x+82, y:m.y+40, deitado:true};
@@ -2480,7 +2507,9 @@ function atualizarHud(){
     const f = S.fazendo;
     doing.classList.add('on');
     doing.classList.toggle('sozinho', !!f.sozinho);
-    document.getElementById('doTxt').textContent = (f.sozinho ? '⚠ ' : '') + f.label;
+    document.getElementById('doTxt').textContent =
+      (f.compromisso ? '🤝 ' : (f.sozinho ? '⚠ ' : '')) + f.label +
+      (f.compromisso ? ' — até o fim' : '');
     let pct, sub;
     if(f.tipo === 'projeto'){
       const p = S.projetos.find(x=>x.id===f.dados.id);
