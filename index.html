@@ -744,6 +744,8 @@ function regrasPadrao(){
       {id:'codar', ativa:true, horas:3},
     ],
     trabalhaDe: 8, trabalhaAte: 19, folgaFds: true,
+    // o que ele faz quando nenhuma regra bate e não é hora de trabalhar
+    ocioso: 'tv',
   };
 }
 
@@ -892,6 +894,7 @@ const criticoDe = (b, val) => b.maior ? val >= 85 : val <= 18;
 function pensarAuto(){
   if(!S.auto) return;
   if(!S.regras) S.regras = regrasPadrao();
+  if(S.regras.ocioso === undefined) S.regras.ocioso = 'tv';   // partida salva antes desta regra
   if(involuntario()) return;
 
   const ocupadoAgora = !!S.fazendo;
@@ -924,7 +927,15 @@ function pensarAuto(){
     } else if(rodarAcaoAuto(acao, motivo)) return;
   }
 
-  if(!S.fazendo && horarioDeTrabalho() && tentarTrabalho()) return;
+  if(S.fazendo) return;
+  if(horarioDeTrabalho() && tentarTrabalho()) return;
+
+  // não sobrou nada: em vez de ficar olhando pra parede, faz o que você escolheu
+  const oc = S.regras.ocioso;
+  if(oc && oc !== 'nada' && podeAcao(oc)){
+    const porque = horarioDeTrabalho() ? 'sem trabalho na fila' : 'fora do horário de trabalho';
+    rodarAcaoAuto(oc, porque);
+  }
 }
 
 /* Ação que rende ao longo do tempo, não só no fim.
@@ -1211,8 +1222,10 @@ function porHora(d){
   render(true);
 }
 
-// abaixo de certo ponto o corpo resolve sozinho, com ou sem a sua vontade
+// abaixo de certo ponto o corpo resolve sozinho, com ou sem a sua vontade.
+// no piloto automático isso não existe: quem manda são as suas regras, e só elas.
 function autocuidado(){
+  if(S.auto) return;
   if(involuntario()) return;
   const b = S.b;
   const ate = CFG.sonoTeto;
@@ -1242,6 +1255,7 @@ function autocuidado(){
 
 // o personagem tem vontade própria: cabeça cansada foge do trabalho sozinha
 function vontadePropria(){
+  if(S.auto) return;              // no piloto quem decide são as regras, não o impulso
   const f = S.fazendo;
   if(!f || !['projeto','chamado'].includes(f.tipo)) return;
   const b = S.b;
@@ -2665,7 +2679,13 @@ function renderAuto(){
         <button class="btn gho" data-jor="-1">Começar mais cedo</button>
         <button class="btn gho" data-jor="1">Ir até mais tarde</button>
         <button class="btn gho" id="btFds">${R.folgaFds?'Passar a trabalhar no fds':'Folgar no fim de semana'}</button>
-      </div></div>`;
+      </div></div>
+    <div class="card">
+      <div class="cardTop"><h3>Quando não sobra nada</h3>
+        <span class="pill">${(ACOES_AUTO[R.ocioso]||{n:'nada'}).n}</span></div>
+      <div class="meta">Nenhuma regra bateu e não é hora de trabalhar. Sem isso ele fica olhando pra parede.</div>
+      <div class="acts"><button class="btn gho" id="btOcio">Trocar</button></div>
+    </div>`;
   R.trabalho.forEach((r, i) => {
     const d = TRABALHO_AUTO.find(x => x.id === r.id);
     h += `<div class="card" style="${r.ativa?'':'opacity:.45'}">
@@ -2706,6 +2726,11 @@ function renderAuto(){
   };
   const bf = document.getElementById('btFds');
   if(bf) bf.onclick = () => { R.folgaFds = !R.folgaFds; renderAuto(); };
+  const bo = document.getElementById('btOcio');
+  if(bo) bo.onclick = () => sheet('<h2>Quando não sobra nada</h2><div class="sub">O que ele faz nas horas vagas.</div>',
+    ['tv','insta','correr','taniaCafe','taniaHora','limpar','banho','curso','nada'].map(id => ({
+      ic:(ACOES_AUTO[id]||{ic:'🚫'}).ic, n:(ACOES_AUTO[id]||{n:'Ficar parado'}).n,
+      click:()=>{ R.ocioso = id; fecharSheet(); renderAuto(); }})));
   el.querySelectorAll('[data-jor]').forEach(b => b.onclick = () => {
     const d = +b.dataset.jor;
     if(d < 0) R.trabalhaDe = cl(R.trabalhaDe-1, 0, 23);
