@@ -498,6 +498,12 @@ const CFG = {
     normal: {p:0.50, custoMin:50, custoMax:90,  volMin:.60, volMax:.90,  mixA:.25, mixB:.50},
     ruim:   {p:0.25, custoMin:90, custoMax:130, volMin:.30, volMax:.60,  mixA:.10, mixB:.45},
   },
+  // prazo: 10 dias úteis, sempre. Só de vez em quando o cliente pede pra correr.
+  prazoDiasUteis: 10,
+  chanceUrgente: 0.12,
+  urgenteMin: 4, urgenteMax: 7,
+  bonusUrgente: 0.20,
+
   noShow: 0.28,
   // o follow-up MULTIPLICA a chance em vez de somar um valor fixo.
   // somando, um preço absurdo ainda fechava 1 em 5 e não dava pra recusar pelo preço.
@@ -615,6 +621,27 @@ const fds   = () => { const w = agora().getDay(); return w===0 || w===6; };
 const DIAS  = ['dom','seg','ter','qua','qui','sex','sáb'];
 const MESES = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
 function hhmm(h){ const H = Math.floor(h)%24, M = Math.floor((h%1)*60); return String(H).padStart(2,'0')+':'+String(M).padStart(2,'0'); }
+// soma dias ÚTEIS a partir de um instante, pulando sábado e domingo
+function somarDiasUteis(t, dias){
+  let h = t, faltam = dias;
+  while(faltam > 0){
+    h += 24;
+    const d = new Date(D0.getTime() + h*3600e3);
+    if(d.getDay() !== 0 && d.getDay() !== 6) faltam--;
+  }
+  return h;
+}
+// quantos dias úteis ainda cabem entre agora e um instante futuro
+function diasUteisAte(t){
+  if(t <= S.t) return 0;
+  let n = 0;
+  for(let h = S.t + 24; h <= t; h += 24){
+    const d = new Date(D0.getTime() + h*3600e3);
+    if(d.getDay() !== 0 && d.getDay() !== 6) n++;
+  }
+  return n;
+}
+
 function dur(h){
   if(h < 1) return Math.round(h*60)+' min';
   const H = Math.floor(h), M = Math.round((h%1)*60);
@@ -1604,7 +1631,7 @@ const EVENTOS = [
   {id:'gripe', t:'Você acordou gripado', d:'Dois dias arrastados.',
    f:()=>{ S.b.energia=cl(S.b.energia-35,0,100); S.b.animo=cl(S.b.animo-8,0,100); return 'Corpo mole, cabeça pesada.'; }},
   {id:'sumiu', t:'Cliente sumiu no meio do projeto', d:'Você mandou dúvida e ele não responde há dias. O prazo corre igual.',
-   f:()=>{ const p = S.projetos[0]; if(p){ p.prazo -= 12; return p.cliente+' não responde, e o prazo encurtou.'; } return 'Falso alarme.'; }},
+   f:()=>{ const p = S.projetos[0]; if(p){ p.prazo -= 24; return p.cliente+' não responde, e o prazo encurtou um dia.'; } return 'Falso alarme.'; }},
   {id:'desconto', t:'Lead pedindo desconto agressivo', d:'Quer metade do preço e diz que tem outro orçamento.',
    f:()=>{ const l = S.leads.find(x=>x.st==='pensando'); if(l){ l.teto *= 0.75; return l.empresa+' endureceu. Só fecha por bem menos.'; } return 'Não era ninguém importante.'; }},
   {id:'aniversario', t:'Aniversário na família', d:'Todo mundo vai. Você também deveria.',
@@ -1754,19 +1781,27 @@ function fimFollow(id){
 function fechar(l){
   const T = CFG.tipos[l.tipo];
   const horas = rnd(T.hMin, T.hMax) * (l.orcamento/l.base) * 0.85 + rnd(T.hMin, T.hMax)*0.15;
-  const entrada = l.orcamento/2;
+
+  // 10 dias úteis é a regra da casa; correr é exceção, e quem pede paga mais
+  const urgente = Math.random() < CFG.chanceUrgente;
+  const diasUteis = urgente ? ri(CFG.urgenteMin, CFG.urgenteMax) : CFG.prazoDiasUteis;
+  const preco = Math.round(l.orcamento * (urgente ? 1 + CFG.bonusUrgente : 1));
+
+  const entrada = preco/2;
   S.dinheiro += entrada; S.faturadoMes += entrada;
   ex('Entrada — '+l.empresa, entrada);
   const p = {
     id: S.seq++, cliente: l.empresa, contato: l.nome, classe: l.classe, tipo: l.tipo,
-    preco: l.orcamento, horas: Math.max(3, horas), feitas: 0,
-    prazo: S.t + Math.max(72, horas*5.5), inicio: S.t,
+    preco, horas: Math.max(3, horas), feitas: 0,
+    prazo: somarDiasUteis(S.t, diasUteis), diasUteis, urgente, inicio: S.t,
     satisfacao: CFG.classes[l.classe].sat, pedido: l.pedido, atraso:false,
   };
   S.projetos.push(p);
   l.st = 'perdido';
-  zap(l.nome, 'Fechado! Pode começar.');
-  toast('<b>Fechou com '+l.empresa+'</b> por '+fmt(l.orcamento)+'. Entrada de '+fmt(entrada)+' na conta.','v', 7000, 'venda');
+  zap(l.nome, urgente ? 'Fechado! Mas preciso em '+diasUteis+' dias úteis, dá pra correr?' : 'Fechado! Pode começar.');
+  toast('<b>Fechou com '+l.empresa+'</b> por '+fmt(preco)+'. Entrada de '+fmt(entrada)+'.' +
+    (urgente ? ' <b style="color:var(--laranja)">Pediu em '+diasUteis+' dias úteis</b>, e pagou 20% a mais por isso.'
+             : ' Prazo de '+diasUteis+' dias úteis.'), 'v', 8000, 'venda');
 }
 
 function trabalhar(id, horas){
@@ -2617,10 +2652,10 @@ function tarefasAgora(){
 
   S.projetos.slice().sort((a,b) => a.prazo-b.prazo).slice(0,2).forEach(p => {
     const pronto = p.feitas >= p.horas;
-    const dias = (p.prazo - S.t)/24;
-    t.push({ic: pronto ? '📦' : '⌨️', n: pronto ? 'Entregar' : p.cliente.split(' ')[0],
-            q: pronto ? fmt(p.preco/2) : (dias<=0 ? 'atrasado' : Math.ceil(dias)+'d'),
-            cor: pronto ? 'ok' : (dias<=0 ? 'urgente' : (dias<2 ? 'atencao' : '')),
+    const uteis = diasUteisAte(p.prazo);
+    t.push({ic: pronto ? '📦' : (p.urgente ? '🔥' : '⌨️'), n: pronto ? 'Entregar' : p.cliente.split(' ')[0],
+            q: pronto ? fmt(p.preco/2) : (S.t > p.prazo ? 'atrasado' : uteis+'d úteis'),
+            cor: pronto ? 'ok' : (S.t > p.prazo ? 'urgente' : (uteis <= 2 ? 'atencao' : '')),
             faz: abrirMesa});
   });
 
@@ -3143,10 +3178,11 @@ function renderMesa(){
     emCurso.forEach(p => {
       const falta = p.horas - p.feitas;
       const atraso = S.t > p.prazo;
-      const restaPrazo = p.prazo - S.t;
-      h += `<div class="card ${atraso?'bad':''}"><div class="cardTop"><h3>${p.cliente}</h3>
-        <span class="pill ${atraso?'r':''}">${atraso?'ATRASADO':'faltam '+Math.ceil(restaPrazo/24)+'d'}</span></div>
+      const uteis = diasUteisAte(p.prazo);
+      h += `<div class="card ${atraso?'bad':(uteis<=2?'warn':'')}"><div class="cardTop"><h3>${p.cliente}</h3>
+        <span class="pill ${atraso?'r':(uteis<=2?'o':'')}">${atraso?'ATRASADO':uteis+(uteis===1?' dia útil':' dias úteis')}</span></div>
         <div class="meta">${p.pedido} · ${fmt(p.preco)} · ${dur(falta)} de código</div>
+        <div class="meta" style="color:var(--texto3)">Prazo combinado: ${p.diasUteis||10} dias úteis${p.urgente?' · <b style="color:var(--laranja)">o cliente pediu pra correr</b>':''}</div>
         <div class="prog2"><i style="width:${p.feitas/p.horas*100}%"></i></div>
         <div class="acts">
           <button class="btn pri" data-tra="${p.id}" data-h="2">Codar 2h</button>
