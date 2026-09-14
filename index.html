@@ -725,7 +725,8 @@ const TRABALHO_AUTO = [
 function regrasPadrao(){
   return {
     vitais: [
-      {k:'energia', v:25, ativa:true, faz:'dormir', exc:[{t:'hora', de:8, ate:20, faz:'cochilo'}]},
+      {k:'energia', v:25, ativa:true, faz:'dormir', interrompe:true,
+       exc:[{t:'hora', de:8, ate:20, faz:'cochilo'}, {t:'fazendo', k:'dormindo', faz:'nada'}]},
       {k:'fome', v:35, ativa:true, faz:'comer:marmita',
        exc:[{t:'despensa', v:12, faz:'comer:burger'}, {t:'hora', de:0, ate:6, faz:'nada'}]},
       {k:'higiene', v:30, ativa:true, faz:'banho', exc:[{t:'hora', de:0, ate:6, faz:'nada'}]},
@@ -746,6 +747,15 @@ function regrasPadrao(){
   };
 }
 
+const GRUPOS_ATIVIDADE = {
+  qualquer:    {n:'fazendo qualquer coisa', tipos:null},
+  dormindo:    {n:'dormindo', tipos:['dormir']},
+  trabalhando: {n:'trabalhando', tipos:['projeto','chamado','reuniao','follow','curso','avaliacao','responderRA']},
+  comendo:     {n:'comendo', tipos:['comer']},
+  fora:        {n:'fora de casa', tipos:['correr','mercado','limpezaTania']},
+  descansando: {n:'descansando', tipos:['tv','tania','insta','banho','parado']},
+};
+
 function condicaoBate(e){
   const h = hDia();
   switch(e.t){
@@ -754,6 +764,12 @@ function condicaoBate(e){
     case 'dinheiro': return S.dinheiro < e.v;
     case 'fds':      return fds();
     case 'barra':    return e.maior ? S.b[e.k] > e.v : S.b[e.k] < e.v;
+    case 'fazendo': {
+      if(!S.fazendo) return false;
+      const g = GRUPOS_ATIVIDADE[e.k];
+      if(!g) return false;
+      return g.tipos ? g.tipos.includes(S.fazendo.tipo) : true;
+    }
     default:         return false;
   }
 }
@@ -763,6 +779,7 @@ const nomeCondicao = e => ({
   dinheiro: () => 'conta abaixo de '+fmt(e.v),
   fds:      () => 'fim de semana',
   barra:    () => (BARRAS_AUTO.find(b=>b.k===e.k)||{n:e.k}).n.toLowerCase()+(e.maior?' acima de ':' abaixo de ')+e.v,
+  fazendo:  () => 'estiver '+((GRUPOS_ATIVIDADE[e.k]||{n:e.k}).n),
 }[e.t] || (()=>e.t))();
 
 function podeAcao(id){
@@ -862,30 +879,39 @@ function tentarTrabalhoInterno(){
   return false;
 }
 
-// o cérebro: roda quando ele está livre e decide o que fazer
+// o cérebro: decide o que fazer, e pode largar o que está fazendo se a regra permitir
 function pensarAuto(){
-  if(!S.auto || S.fazendo) return;
+  if(!S.auto) return;
   if(!S.regras) S.regras = regrasPadrao();
+  if(involuntario()) return;              // o que o corpo começou sozinho ninguém corta
+
+  const ocupadoAgora = !!S.fazendo;
 
   for(const r of S.regras.vitais){
     if(!r.ativa) continue;
+    if(ocupadoAgora && !r.interrompe) continue;
+
     const b = BARRAS_AUTO.find(x => x.k === r.k);
     const val = valorVital(r.k);
-    const bateu = b.maior ? val > r.v : val < r.v;
-    if(!bateu) continue;
+    if(!(b.maior ? val > r.v : val < r.v)) continue;
 
     const exc = (r.exc||[]).find(condicaoBate);
     const acao = exc ? exc.faz : r.faz;
-    if(acao === 'nada'){
-      if(exc) continue;    // a exceção mandou pular esta regra
-      continue;
-    }
-    const motivo = b.n.toLowerCase() + (b.maior ? ' em ' : ' em ') + Math.round(val) +
+    if(acao === 'nada') continue;
+
+    const alvo = (ACOES_AUTO[acao]||{}).tipo || acao;
+    if(ocupadoAgora && S.fazendo.tipo === alvo) continue;   // já está nisso
+
+    const motivo = b.n.toLowerCase() + ' em ' + Math.round(val) +
                    (exc ? ' · exceção: ' + nomeCondicao(exc) : '');
-    if(rodarAcaoAuto(acao, motivo)) return;
+    if(ocupadoAgora){
+      const antes = S.fazendo.label;
+      S.fazendo = null;
+      if(rodarAcaoAuto(acao, motivo + ' · largou: ' + antes)) return;
+    } else if(rodarAcaoAuto(acao, motivo)) return;
   }
 
-  if(horarioDeTrabalho() && tentarTrabalho()) return;
+  if(!S.fazendo && horarioDeTrabalho() && tentarTrabalho()) return;
 }
 
 /* Ação que rende ao longo do tempo, não só no fim.
@@ -1139,7 +1165,7 @@ function avancar(dt){
     }
   }
 
-  if(S.auto && !S.fazendo) pensarAuto();
+  if(S.auto) pensarAuto();
 
   // --- viradas
   if(dep.getHours() !== antes.getHours()) porHora(dep);
@@ -2579,9 +2605,11 @@ function renderAuto(){
         <span class="pill ${agora?'o':''}">${val}</span></div>
       <div class="meta">Faz: <b>${(ACOES_AUTO[r.faz]||{n:r.faz}).n}</b></div>
       ${(r.exc||[]).map(e => `<div class="meta" style="color:var(--texto3)">Mas se ${nomeCondicao(e)} → <b style="color:var(--texto2)">${(ACOES_AUTO[e.faz]||{n:e.faz}).n}</b></div>`).join('')}
+      ${r.interrompe ? '<div class="meta" style="color:var(--laranja)">Pode largar o que estiver fazendo pra atender isso.</div>' : ''}
       <div class="acts">
         <button class="btn" data-edt="${i}">Editar</button>
         <button class="btn gho" data-liga="${i}">${r.ativa?'Desligar':'Ligar'}</button>
+        <button class="btn gho" data-int="${i}">${r.interrompe?'Não interromper':'Deixar interromper'}</button>
       </div></div>`;
   });
 
@@ -2641,6 +2669,9 @@ function renderAuto(){
   });
   el.querySelectorAll('[data-liga]').forEach(b => b.onclick = () => {
     const r = R.vitais[+b.dataset.liga]; r.ativa = !r.ativa; renderAuto();
+  });
+  el.querySelectorAll('[data-int]').forEach(b => b.onclick = () => {
+    const r = R.vitais[+b.dataset.int]; r.interrompe = !r.interrompe; renderAuto();
   });
   el.querySelectorAll('[data-tliga]').forEach(b => b.onclick = () => {
     const r = R.trabalho[+b.dataset.tliga]; r.ativa = !r.ativa; renderAuto();
@@ -2706,13 +2737,14 @@ function editarRegra(i){
   };
   const pintaExc = () => {
     const el = document.getElementById('erExc');
+    // atributo em MINÚSCULA: o dataset converte data-eE em dataset.ee e o índice vinha NaN
     el.innerHTML = (r.exc||[]).length ? r.exc.map((e,j) =>
       `<div class="card"><div class="meta">Se <b>${nomeCondicao(e)}</b> → <b>${(ACOES_AUTO[e.faz]||{n:e.faz}).n}</b></div>
-       <div class="acts"><button class="btn" data-eE="${j}">Editar</button>
-       <button class="btn dan" data-eX="${j}">Remover</button></div></div>`).join('')
+       <div class="acts"><button class="btn" data-edit="${j}">Editar</button>
+       <button class="btn dan" data-del="${j}">Remover</button></div></div>`).join('')
       : '<div class="vazio">Nenhuma. A ação padrão vale sempre.</div>';
-    el.querySelectorAll('[data-eX]').forEach(x => x.onclick = () => { r.exc.splice(+x.dataset.eX,1); pintaExc(); });
-    el.querySelectorAll('[data-eE]').forEach(x => x.onclick = () => editarExcecao(i, +x.dataset.eE));
+    el.querySelectorAll('[data-del]').forEach(x => x.onclick = () => { r.exc.splice(+x.dataset.del, 1); pintaExc(); });
+    el.querySelectorAll('[data-edit]').forEach(x => x.onclick = () => editarExcecao(i, +x.dataset.edit));
   };
   pintaAcoes(); pintaExc();
 
@@ -2727,6 +2759,7 @@ function editarRegra(i){
       {ic:'🕐', n:'Em certo horário', d:'De que hora a que hora', click:()=>nova({t:'hora', de:20, ate:6, faz:'nada'})},
       {ic:'🧺', n:'Despensa baixa', d:'Quando não tem comida em casa', click:()=>nova({t:'despensa', v:12, faz:'nada'})},
       {ic:'💰', n:'Pouco dinheiro', d:'Quando a conta está apertada', click:()=>nova({t:'dinheiro', v:1000, faz:'nada'})},
+      {ic:'⏳', n:'Se já estiver fazendo algo', d:'Dormindo, trabalhando, comendo, fora de casa', click:()=>nova({t:'fazendo', k:'dormindo', faz:'nada'})},
       {ic:'📅', n:'Fim de semana', click:()=>nova({t:'fds', faz:'nada'})},
       {ic:'📊', n:'Outra barra', d:'Ex.: só se o estresse estiver alto', click:()=>nova({t:'barra', k:'estresse', v:70, maior:true, faz:'nada'})},
       {ic:'↩︎', n:'Cancelar', click:()=>{ fecharSheet(); editarRegra(i); }},
@@ -2763,6 +2796,12 @@ function editarExcecao(iRegra, j){
       <label class="f">${e.maior?'Acima de':'Abaixo de'} <b id="exV">${e.v}</b></label>
       <input type="range" id="exVR" min="5" max="95" value="${e.v}">
       <div class="acts"><button class="btn gho" id="exInv">Trocar para ${e.maior?'abaixo de':'acima de'}</button></div>
+    </div>`;
+  } else if(e.t === 'fazendo'){
+    quando = `<div class="card">
+      <label class="f">Se ele já estiver</label>
+      <div id="exAtiv" style="display:flex;flex-wrap:wrap;gap:5px"></div>
+      <div class="meta" style="margin-top:8px;color:var(--texto3)">Só vale nas regras marcadas como <b>Deixar interromper</b> — são as únicas que agem com ele ocupado.</div>
     </div>`;
   } else {
     quando = `<div class="card"><div class="meta">Vale em todo sábado e domingo. Não tem o que ajustar.</div></div>`;
@@ -2815,6 +2854,11 @@ function editarExcecao(iRegra, j){
     bx.innerHTML = BARRAS_AUTO.map(b =>
       `<button class="btn ${b.k===e.k?'pri':'gho'}" data-b="${b.k}" style="padding:5px 8px;font-size:11px">${b.ic} ${b.n}</button>`).join('');
     bx.querySelectorAll('[data-b]').forEach(x => x.onclick = () => { e.k = x.dataset.b; editarExcecao(iRegra, j); });
+  } else if(e.t === 'fazendo'){
+    const bx = document.getElementById('exAtiv');
+    bx.innerHTML = Object.entries(GRUPOS_ATIVIDADE).map(([k,g]) =>
+      `<button class="btn ${k===e.k?'pri':'gho'}" data-g="${k}" style="padding:5px 9px;font-size:11.5px">${g.n}</button>`).join('');
+    bx.querySelectorAll('[data-g]').forEach(x => x.onclick = () => { e.k = x.dataset.g; editarExcecao(iRegra, j); });
   }
 }
 
