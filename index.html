@@ -739,7 +739,7 @@ function regrasPadrao(){
     ],
     trabalho: [
       {id:'entregar', ativa:true}, {id:'chamado', ativa:true}, {id:'reuniao', ativa:true},
-      {id:'orcar', ativa:true, preco:95}, {id:'follow', ativa:true},
+      {id:'orcar', ativa:true, precos:{S:100, M:95, C:90}}, {id:'follow', ativa:true},
       {id:'avaliacao', ativa:true, satisfacao:80}, {id:'ra', ativa:true},
       {id:'codar', ativa:true, horas:3},
     ],
@@ -836,6 +836,12 @@ function cuidarDaMaisBaixa(){
   return false;
 }
 
+// percentual por porte do projeto; aceita partida salva com o valor único antigo
+function precoDoTipo(r, tipo){
+  if(!r.precos) r.precos = {S:r.preco||95, M:r.preco||95, C:r.preco||95};
+  return r.precos[tipo] != null ? r.precos[tipo] : 95;
+}
+
 function tentarTrabalho(){
   autoExecutando = true;
   try { return tentarTrabalhoInterno(); }
@@ -866,9 +872,10 @@ function tentarTrabalhoInterno(){
       case 'orcar': {
         const l = S.leads.find(x => x.st === 'orcar');
         if(l){
-          const v = Math.round(l.base * (r.preco/100) / 10) * 10;
+          const pct = precoDoTipo(r, l.tipo);
+          const v = Math.round(l.base * (pct/100) / 10) * 10;
           enviarOrcamento(l, Math.max(100, v));
-          registrarAuto('📤 Orçou '+fmt(v), l.empresa+' · '+r.preco+'% da referência');
+          registrarAuto('📤 Orçou '+fmt(v), l.empresa+' · '+CFG.tipos[l.tipo].nome.toLowerCase()+' a '+pct+'%');
           return true;
         }
         break;
@@ -2707,13 +2714,18 @@ function renderAuto(){
     const d = TRABALHO_AUTO.find(x => x.id === r.id);
     h += `<div class="card" style="${r.ativa?'':'opacity:.45'}">
       <div class="cardTop"><h3>${d.ic} ${d.n}</h3><span class="pill">${i+1}º</span></div>
-      ${r.preco!=null ? `<div class="meta">Preço: <b>${r.preco}%</b> da referência do projeto</div>` : ''}
+      ${r.id==='orcar' ? `<div class="meta">Percentual da referência, por porte:</div>
+        <div class="kv"><span>${CFG.tipos.S.nome} · ${fmt(CFG.tipos.S.pMin)} a ${fmt(CFG.tipos.S.pMax)}</span><span>${precoDoTipo(r,'S')}%</span></div>
+        <div class="kv"><span>${CFG.tipos.M.nome} · ${fmt(CFG.tipos.M.pMin)} a ${fmt(CFG.tipos.M.pMax)}</span><span>${precoDoTipo(r,'M')}%</span></div>
+        <div class="kv"><span>${CFG.tipos.C.nome} · ${fmt(CFG.tipos.C.pMin)} a ${fmt(CFG.tipos.C.pMax)}</span><span>${precoDoTipo(r,'C')}%</span></div>` : ''}
       ${r.horas!=null ? `<div class="meta">Blocos de <b>${r.horas}h</b> por vez</div>` : ''}
       ${r.satisfacao!=null ? `<div class="meta">Só pede se a satisfação estiver acima de <b>${r.satisfacao}</b></div>` : ''}
       <div class="acts">
         <button class="btn gho" data-tliga="${i}">${r.ativa?'Desligar':'Ligar'}</button>
         ${i>0?`<button class="btn gho" data-sobe="${i}">Subir</button>`:''}
-        ${r.preco!=null?`<button class="btn gho" data-preco="${i}">Mudar preço</button>`:''}
+        ${r.id==='orcar'?`<button class="btn gho" data-pct="${i}|S">Simples</button>
+                          <button class="btn gho" data-pct="${i}|M">Médio</button>
+                          <button class="btn gho" data-pct="${i}|C">Complexo</button>`:''}
         ${r.horas!=null?`<button class="btn gho" data-horas="${i}">Mudar bloco</button>`:''}
       </div></div>`;
   });
@@ -2759,9 +2771,14 @@ function renderAuto(){
     [R.trabalho[i-1], R.trabalho[i]] = [R.trabalho[i], R.trabalho[i-1]];
     renderAuto();
   });
-  el.querySelectorAll('[data-preco]').forEach(b => b.onclick = () => {
-    const r = R.trabalho[+b.dataset.preco];
-    numero('Preço do orçamento', 'Percentual da referência do projeto. Abaixo de 100% fecha mais, mas você ganha menos.', r.preco, 50, 130, v => { r.preco = v; renderAuto(); });
+  el.querySelectorAll('[data-pct]').forEach(b => b.onclick = () => {
+    const [idx, tipo] = b.dataset.pct.split('|');
+    const r = R.trabalho[+idx];
+    const T = CFG.tipos[tipo];
+    numero('Preço · projeto ' + T.nome.toLowerCase(),
+      'Percentual da referência, só para projetos de ' + fmt(T.pMin) + ' a ' + fmt(T.pMax) +
+      '. Abaixo de 100% fecha mais, mas você ganha menos.',
+      precoDoTipo(r, tipo), 50, 130, v => { r.precos[tipo] = v; renderAuto(); });
   });
   el.querySelectorAll('[data-horas]').forEach(b => b.onclick = () => {
     const r = R.trabalho[+b.dataset.horas];
