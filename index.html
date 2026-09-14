@@ -743,9 +743,9 @@ function regrasPadrao(){
       {id:'avaliacao', ativa:true, satisfacao:80}, {id:'ra', ativa:true},
       {id:'codar', ativa:true, horas:3},
     ],
-    trabalhaDe: 8, trabalhaAte: 19, folgaFds: true,
-    // o que ele faz quando nenhuma regra bate e não é hora de trabalhar
-    ocioso: 'tv',
+    // não existe horário de trabalho: toda hora é hora.
+    // sem trabalho na fila, ele cuida da barra mais baixa até todas passarem de 80.
+    confortavel: 80,
   };
 }
 
@@ -810,12 +810,30 @@ function registrarAuto(o, porque){
   if(S.autoLog.length > 40) S.autoLog.pop();
 }
 
-function horarioDeTrabalho(){
-  const R = S.regras;
-  const h = hDia();
-  if(R.folgaFds && fds()) return false;
-  return R.trabalhaDe <= R.trabalhaAte ? (h >= R.trabalhaDe && h < R.trabalhaAte)
-                                       : (h >= R.trabalhaDe || h < R.trabalhaAte);
+// quanto de folga uma barra tem: nas invertidas, folga é o inverso do valor
+const folgaDa = (b, val) => b.maior ? 100 - val : val;
+
+/* Sem regra disparada e sem trabalho na fila, ele adianta o serviço:
+   pega a barra mais baixa e cuida dela. Só para quando todas passam do confortável. */
+function cuidarDaMaisBaixa(){
+  const limite = S.regras.confortavel || 80;
+  const cand = S.regras.vitais
+    .filter(r => r.ativa)
+    .map(r => {
+      const b = BARRAS_AUTO.find(x => x.k === r.k);
+      const val = valorVital(r.k);
+      return {r, b, val, folga: folgaDa(b, val)};
+    })
+    .filter(c => c.folga < limite)
+    .sort((a, b) => a.folga - b.folga);
+
+  for(const c of cand){
+    const exc = (c.r.exc||[]).find(condicaoBate);
+    const acao = exc ? exc.faz : c.r.faz;
+    if(acao === 'nada' || !podeAcao(acao)) continue;
+    if(rodarAcaoAuto(acao, 'adiantando · ' + c.b.n.toLowerCase() + ' em ' + Math.round(c.val))) return true;
+  }
+  return false;
 }
 
 function tentarTrabalho(){
@@ -894,7 +912,7 @@ const criticoDe = (b, val) => b.maior ? val >= 85 : val <= 18;
 function pensarAuto(){
   if(!S.auto) return;
   if(!S.regras) S.regras = regrasPadrao();
-  if(S.regras.ocioso === undefined) S.regras.ocioso = 'tv';   // partida salva antes desta regra
+  if(S.regras.confortavel === undefined) S.regras.confortavel = 80;   // partida salva antes disso
   if(involuntario()) return;
 
   const ocupadoAgora = !!S.fazendo;
@@ -928,14 +946,9 @@ function pensarAuto(){
   }
 
   if(S.fazendo) return;
-  if(horarioDeTrabalho() && tentarTrabalho()) return;
-
-  // não sobrou nada: em vez de ficar olhando pra parede, faz o que você escolheu
-  const oc = S.regras.ocioso;
-  if(oc && oc !== 'nada' && podeAcao(oc)){
-    const porque = horarioDeTrabalho() ? 'sem trabalho na fila' : 'fora do horário de trabalho';
-    rodarAcaoAuto(oc, porque);
-  }
+  if(tentarTrabalho()) return;      // toda hora é hora de trabalhar
+  if(cuidarDaMaisBaixa()) return;
+  // tudo acima do confortável e nada na fila: aí sim ele descansa de verdade
 }
 
 /* Ação que rende ao longo do tempo, não só no fim.
@@ -2672,19 +2685,23 @@ function renderAuto(){
       </div></div>`;
   });
 
+  const baixa = R.vitais.filter(r => r.ativa).map(r => {
+    const b = BARRAS_AUTO.find(x => x.k === r.k);
+    return {b, val: valorVital(r.k), folga: folgaDa(b, valorVital(r.k))};
+  }).sort((a,b) => a.folga - b.folga)[0];
+
   h += `<div class="secTit">Trabalhar <span class="n">nesta ordem</span></div>
     <div class="card">
-      <div class="meta">Só trabalha entre <b>${R.trabalhaDe}h</b> e <b>${R.trabalhaAte}h</b>${R.folgaFds?', e folga no fim de semana':', inclusive fim de semana'}.</div>
-      <div class="acts">
-        <button class="btn gho" data-jor="-1">Começar mais cedo</button>
-        <button class="btn gho" data-jor="1">Ir até mais tarde</button>
-        <button class="btn gho" id="btFds">${R.folgaFds?'Passar a trabalhar no fds':'Folgar no fim de semana'}</button>
-      </div></div>
-    <div class="card">
-      <div class="cardTop"><h3>Quando não sobra nada</h3>
-        <span class="pill">${(ACOES_AUTO[R.ocioso]||{n:'nada'}).n}</span></div>
-      <div class="meta">Nenhuma regra bateu e não é hora de trabalhar. Sem isso ele fica olhando pra parede.</div>
-      <div class="acts"><button class="btn gho" id="btOcio">Trocar</button></div>
+      <div class="meta">Não existe horário: <b>toda hora é hora de trabalhar</b>. Ele só não trabalha quando alguma regra acima estiver disparada.</div>
+    </div>`;
+
+  h += `<div class="secTit">Quando não sobra trabalho</div>
+    <div class="card ${baixa && baixa.folga < (R.confortavel||80) ? 'warn' : 'good'}">
+      <div class="cardTop"><h3>Cuida da barra mais baixa</h3>
+        <span class="pill">até ${R.confortavel||80}</span></div>
+      <div class="meta">Sem nada na fila, ele adianta o serviço: pega a pior barra e resolve. Só descansa de verdade quando <b>todas</b> passam de ${R.confortavel||80}.</div>
+      ${baixa ? `<div class="meta" style="margin-top:6px">Agora a pior é <b>${baixa.b.ic} ${baixa.b.n}</b>, em ${Math.round(baixa.val)} — ${baixa.folga < (R.confortavel||80) ? 'ele vai cuidar disso' : 'está tudo confortável'}.</div>` : ''}
+      <div class="acts"><button class="btn gho" id="btConf">Mudar o confortável</button></div>
     </div>`;
   R.trabalho.forEach((r, i) => {
     const d = TRABALHO_AUTO.find(x => x.id === r.id);
@@ -2724,19 +2741,10 @@ function renderAuto(){
   document.getElementById('btPadrao').onclick = () => {
     S.regras = regrasPadrao(); toast('Regras de volta ao padrão.','o'); renderAuto();
   };
-  const bf = document.getElementById('btFds');
-  if(bf) bf.onclick = () => { R.folgaFds = !R.folgaFds; renderAuto(); };
-  const bo = document.getElementById('btOcio');
-  if(bo) bo.onclick = () => sheet('<h2>Quando não sobra nada</h2><div class="sub">O que ele faz nas horas vagas.</div>',
-    ['tv','insta','correr','taniaCafe','taniaHora','limpar','banho','curso','nada'].map(id => ({
-      ic:(ACOES_AUTO[id]||{ic:'🚫'}).ic, n:(ACOES_AUTO[id]||{n:'Ficar parado'}).n,
-      click:()=>{ R.ocioso = id; fecharSheet(); renderAuto(); }})));
-  el.querySelectorAll('[data-jor]').forEach(b => b.onclick = () => {
-    const d = +b.dataset.jor;
-    if(d < 0) R.trabalhaDe = cl(R.trabalhaDe-1, 0, 23);
-    else R.trabalhaAte = cl(R.trabalhaAte+1, 1, 24);
-    renderAuto();
-  });
+  const bc = document.getElementById('btConf');
+  if(bc) bc.onclick = () => numero('O que é estar confortável',
+    'Acima disso ele considera a barra resolvida e para de mexer nela. Quanto mais alto, menos ele descansa.',
+    R.confortavel||80, 50, 100, v => { R.confortavel = v; renderAuto(); });
   el.querySelectorAll('[data-liga]').forEach(b => b.onclick = () => {
     const r = R.vitais[+b.dataset.liga]; r.ativa = !r.ativa; renderAuto();
   });
