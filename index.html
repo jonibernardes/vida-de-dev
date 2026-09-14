@@ -727,17 +727,17 @@ const TRABALHO_AUTO = [
 function regrasPadrao(){
   return {
     vitais: [
-      {k:'energia', v:25, ativa:true, faz:'dormir', interrompe:true,
+      {k:'energia', v:25, meta:85, ativa:true, faz:'dormir', interrompe:true,
        exc:[{t:'hora', de:8, ate:20, faz:'cochilo'}, {t:'fazendo', k:'dormindo', faz:'nada'}]},
-      {k:'fome', v:35, ativa:true, faz:'comer:marmita',
+      {k:'fome', v:35, meta:80, ativa:true, faz:'comer:marmita',
        exc:[{t:'despensa', v:12, faz:'comer:burger'}, {t:'hora', de:0, ate:6, faz:'nada'}]},
-      {k:'higiene', v:30, ativa:true, faz:'banho', exc:[{t:'hora', de:0, ate:6, faz:'nada'}]},
-      {k:'estresse', v:70, ativa:true, faz:'correr', exc:[{t:'hora', de:20, ate:6, faz:'tv'}]},
-      {k:'animo', v:35, ativa:true, faz:'correr', exc:[{t:'hora', de:20, ate:6, faz:'tv'}]},
-      {k:'despensa', v:15, ativa:true, faz:'mercado', exc:[{t:'hora', de:21, ate:8, faz:'nada'}]},
-      {k:'sujeira', v:70, ativa:true, faz:'limpar', exc:[]},
-      {k:'casamento', v:45, ativa:true, faz:'taniaCafe', exc:[{t:'hora', de:0, ate:7, faz:'nada'}]},
-      {k:'corpo', v:40, ativa:true, faz:'correr', exc:[{t:'hora', de:20, ate:6, faz:'nada'}]},
+      {k:'higiene', v:30, meta:75, ativa:true, faz:'banho', exc:[{t:'hora', de:0, ate:6, faz:'nada'}]},
+      {k:'estresse', v:70, meta:75, ativa:true, faz:'correr', exc:[{t:'hora', de:20, ate:6, faz:'tv'}]},
+      {k:'animo', v:35, meta:70, ativa:true, faz:'correr', exc:[{t:'hora', de:20, ate:6, faz:'tv'}]},
+      {k:'despensa', v:15, meta:60, ativa:true, faz:'mercado', exc:[{t:'hora', de:21, ate:8, faz:'nada'}]},
+      {k:'sujeira', v:70, meta:70, ativa:true, faz:'limpar', exc:[]},
+      {k:'casamento', v:45, meta:75, ativa:true, faz:'taniaCafe', exc:[{t:'hora', de:0, ate:7, faz:'nada'}]},
+      {k:'corpo', v:40, meta:70, ativa:true, faz:'correr', exc:[{t:'hora', de:20, ate:6, faz:'nada'}]},
     ],
     trabalho: [
       {id:'entregar', ativa:true}, {id:'chamado', ativa:true}, {id:'reuniao', ativa:true},
@@ -814,27 +814,30 @@ function registrarAuto(o, porque){
 
 // quanto de folga uma barra tem: nas invertidas, folga é o inverso do valor
 const folgaDa = (b, val) => b.maior ? 100 - val : val;
+// a meta é de cada barra; sem meta própria, cai no padrão da partida
+const metaDa = r => r.meta != null ? r.meta : (S.regras.confortavel || 80);
 
-/* Sem regra disparada e sem trabalho na fila, ele adianta o serviço:
-   pega a barra mais baixa e cuida dela. Só para quando todas passam do confortável. */
+/* Sem regra disparada e sem trabalho na fila, ele adianta o serviço.
+   Escolhe pela distância até a META de cada barra, não pelo valor cru:
+   corpo em 60 com meta 95 é mais urgente que higiene em 55 com meta 60. */
 function cuidarDaMaisBaixa(){
-  const limite = S.regras.confortavel || 80;
   const cand = S.regras.vitais
     .filter(r => r.ativa)
     .map(r => {
       const b = BARRAS_AUTO.find(x => x.k === r.k);
       const val = valorVital(r.k);
-      return {r, b, val, folga: folgaDa(b, val)};
+      const folga = folgaDa(b, val);
+      return {r, b, val, folga, meta: metaDa(r), falta: metaDa(r) - folga};
     })
-    .filter(c => c.folga < limite)
-    .sort((a, b) => a.folga - b.folga);
+    .filter(c => c.falta > 0)
+    .sort((a, b) => b.falta - a.falta);
 
   for(const c of cand){
     const exc = (c.r.exc||[]).find(condicaoBate);
     const acao = exc ? exc.faz : c.r.faz;
     if(acao === 'nada' || !podeAcao(acao)) continue;
     if(c.r.ultima != null && S.t - c.r.ultima < 2) continue;
-    if(rodarAcaoAuto(acao, 'adiantando · ' + c.b.n.toLowerCase() + ' em ' + Math.round(c.val))){ c.r.ultima = S.t; return true; }
+    if(rodarAcaoAuto(acao, 'adiantando · ' + c.b.n.toLowerCase() + ' em ' + Math.round(c.val) + ', meta ' + c.meta)){ c.r.ultima = S.t; return true; }
   }
   return false;
 }
@@ -2682,10 +2685,12 @@ function renderAuto(){
     const b = BARRAS_AUTO.find(x => x.k === r.k);
     const val = Math.round(valorVital(r.k));
     const agora = b.maior ? val > r.v : val < r.v;
+    const meta = metaDa(r), folga = folgaDa(b, val);
     h += `<div class="card ${r.ativa ? (agora?'warn':'') : ''}" style="${r.ativa?'':'opacity:.45'}">
       <div class="cardTop"><h3>${b.ic} ${b.n} ${b.maior?'acima de':'abaixo de'} ${r.v}</h3>
         <span class="pill ${agora?'o':''}">${val}</span></div>
       <div class="meta">Faz: <b>${(ACOES_AUTO[r.faz]||{n:r.faz}).n}</b></div>
+      <div class="meta">Meta: <b>${meta}</b>${folga < meta ? ` · falta <b style="color:var(--laranja)">${Math.round(meta-folga)}</b> pra chegar lá` : ' · <b style="color:var(--verde)">alcançada</b>'}</div>
       ${(r.exc||[]).map(e => `<div class="meta" style="color:var(--texto3)">Mas se ${nomeCondicao(e)} → <b style="color:var(--texto2)">${(ACOES_AUTO[e.faz]||{n:e.faz}).n}</b></div>`).join('')}
       <div class="meta" style="color:${r.interrompe?'var(--laranja)':'var(--texto3)'}">${r.interrompe
         ? 'Larga qualquer tarefa pra atender isso.'
@@ -2697,10 +2702,12 @@ function renderAuto(){
       </div></div>`;
   });
 
-  const baixa = R.vitais.filter(r => r.ativa).map(r => {
+  const fila = R.vitais.filter(r => r.ativa).map(r => {
     const b = BARRAS_AUTO.find(x => x.k === r.k);
-    return {b, val: valorVital(r.k), folga: folgaDa(b, valorVital(r.k))};
-  }).sort((a,b) => a.folga - b.folga)[0];
+    const val = valorVital(r.k), folga = folgaDa(b, val);
+    return {r, b, val, folga, meta: metaDa(r), falta: metaDa(r) - folga};
+  }).sort((a,b) => b.falta - a.falta);
+  const faltando = fila.filter(c => c.falta > 0);
 
   h += `<div class="secTit">Trabalhar <span class="n">nesta ordem</span></div>
     <div class="card">
@@ -2708,12 +2715,15 @@ function renderAuto(){
     </div>`;
 
   h += `<div class="secTit">Quando não sobra trabalho</div>
-    <div class="card ${baixa && baixa.folga < (R.confortavel||80) ? 'warn' : 'good'}">
-      <div class="cardTop"><h3>Cuida da barra mais baixa</h3>
-        <span class="pill">até ${R.confortavel||80}</span></div>
-      <div class="meta">Sem nada na fila, ele adianta o serviço: pega a pior barra e resolve. Só descansa de verdade quando <b>todas</b> passam de ${R.confortavel||80}.</div>
-      ${baixa ? `<div class="meta" style="margin-top:6px">Agora a pior é <b>${baixa.b.ic} ${baixa.b.n}</b>, em ${Math.round(baixa.val)} — ${baixa.folga < (R.confortavel||80) ? 'ele vai cuidar disso' : 'está tudo confortável'}.</div>` : ''}
-      <div class="acts"><button class="btn gho" id="btConf">Mudar o confortável</button></div>
+    <div class="card ${faltando.length ? 'warn' : 'good'}">
+      <div class="cardTop"><h3>Persegue as metas</h3>
+        <span class="pill ${faltando.length?'o':'v'}">${faltando.length ? faltando.length+' abaixo' : 'todas alcançadas'}</span></div>
+      <div class="meta">Sem nada na fila, ele cuida da barra mais distante da <b>própria meta</b>. Corpo em 60 com meta 95 vem antes de higiene em 70 com meta 72.</div>
+      <div style="margin-top:9px">${fila.map(c =>
+        `<div class="kv"><span>${c.b.ic} ${c.b.n}</span>
+          <span style="color:${c.falta>0?'var(--laranja)':'var(--verde)'}">${Math.round(c.folga)} / ${c.meta}</span></div>`).join('')}</div>
+      <div class="meta" style="margin-top:8px;color:var(--texto3)">Cada meta se ajusta em <b>Editar</b>, na regra da barra.</div>
+      <div class="acts"><button class="btn gho" id="btConf">Meta padrão das novas: ${R.confortavel||80}</button></div>
     </div>`;
   R.trabalho.forEach((r, i) => {
     const d = TRABALHO_AUTO.find(x => x.id === r.id);
@@ -2759,9 +2769,9 @@ function renderAuto(){
     S.regras = regrasPadrao(); toast('Regras de volta ao padrão.','o'); renderAuto();
   };
   const bc = document.getElementById('btConf');
-  if(bc) bc.onclick = () => numero('O que é estar confortável',
-    'Acima disso ele considera a barra resolvida e para de mexer nela. Quanto mais alto, menos ele descansa.',
-    R.confortavel||80, 50, 100, v => { R.confortavel = v; renderAuto(); });
+  if(bc) bc.onclick = () => numero('Meta padrão',
+    'Vale só para barra que ainda não tem meta própria. Para mudar uma barra específica, use Editar na regra dela.',
+    R.confortavel||80, 20, 100, v => { R.confortavel = v; renderAuto(); });
   el.querySelectorAll('[data-liga]').forEach(b => b.onclick = () => {
     const r = R.vitais[+b.dataset.liga]; r.ativa = !r.ativa; renderAuto();
   });
@@ -2839,7 +2849,13 @@ function editarRegra(i){
       <button class="fechar" id="erX" aria-label="Fechar">✕</button></div>
     <div class="secTit" style="margin-top:0">Quando disparar</div>
     <div class="card"><label class="f">${b.maior?'Acima de':'Abaixo de'} <b id="erV">${r.v}</b></label>
-      <input type="range" id="erR" min="5" max="95" value="${r.v}"></div>
+      <input type="range" id="erR" min="5" max="95" value="${r.v}">
+      <div class="meta" style="margin-top:6px;color:var(--texto3)">Abaixo disso ele age, mesmo tendo outra coisa pra fazer.</div></div>
+
+    <div class="secTit">Meta desta barra</div>
+    <div class="card"><label class="f">Perseguir até <b id="erM">${metaDa(r)}</b></label>
+      <input type="range" id="erMR" min="20" max="100" value="${metaDa(r)}">
+      <div class="meta" style="margin-top:6px;color:var(--texto3)" id="erMD"></div></div>
 
     <div class="secTit">O que fazer</div>
     <div id="erAcoes"></div>
@@ -2850,7 +2866,19 @@ function editarRegra(i){
   document.getElementById('sheet').classList.add('on');
   document.getElementById('erX').onclick = () => { fecharSheet(); renderAuto(); };
   const rr2 = document.getElementById('erR');
-  rr2.oninput = () => { r.v = +rr2.value; document.getElementById('erV').textContent = r.v; };
+  rr2.oninput = () => { r.v = +rr2.value; document.getElementById('erV').textContent = r.v; pintaMeta(); };
+  const mR = document.getElementById('erMR');
+  const pintaMeta = () => {
+    document.getElementById('erM').textContent = r.meta;
+    const agoraF = Math.round(folgaDa(b, valorVital(r.k)));
+    document.getElementById('erMD').innerHTML = r.meta <= r.v
+      ? '<b style="color:var(--vermelho)">Meta menor que o gatilho: ele nunca vai adiantar esta barra.</b>'
+      : (agoraF >= r.meta ? 'Está em ' + agoraF + ', já passou da meta.'
+        : 'Está em ' + agoraF + ', faltam <b>' + (r.meta - agoraF) + '</b>.');
+  };
+  mR.oninput = () => { r.meta = +mR.value; pintaMeta(); };
+  if(r.meta == null) r.meta = metaDa(r);
+  pintaMeta();
 
   const pintaAcoes = () => {
     document.getElementById('erAcoes').innerHTML = opcoes.map(id =>
