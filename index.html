@@ -879,21 +879,33 @@ function tentarTrabalhoInterno(){
   return false;
 }
 
-// o cérebro: decide o que fazer, e pode largar o que está fazendo se a regra permitir
+// coisas que ele larga sem pensar duas vezes
+const ATIVIDADE_LEVE = ['tv','insta','parado'];
+// no vermelho de verdade, larga qualquer coisa
+const criticoDe = (b, val) => b.maior ? val >= 85 : val <= 18;
+
+/* O cérebro. Com ele ocupado, a regra ainda vale:
+   - barra no vermelho: larga o que estiver fazendo
+   - barra só abaixo do gatilho: larga se estiver em algo leve (TV, Instagram, parado)
+   - "Interromper sempre" ligado na regra: larga em qualquer caso
+   Nada disso corta ação involuntária. */
 function pensarAuto(){
   if(!S.auto) return;
   if(!S.regras) S.regras = regrasPadrao();
-  if(involuntario()) return;              // o que o corpo começou sozinho ninguém corta
+  if(involuntario()) return;
 
   const ocupadoAgora = !!S.fazendo;
+  const leve = ocupadoAgora && ATIVIDADE_LEVE.includes(S.fazendo.tipo);
 
   for(const r of S.regras.vitais){
     if(!r.ativa) continue;
-    if(ocupadoAgora && !r.interrompe) continue;
 
     const b = BARRAS_AUTO.find(x => x.k === r.k);
     const val = valorVital(r.k);
     if(!(b.maior ? val > r.v : val < r.v)) continue;
+
+    const critico = criticoDe(b, val);
+    if(ocupadoAgora && !critico && !leve && !r.interrompe) continue;
 
     const exc = (r.exc||[]).find(condicaoBate);
     const acao = exc ? exc.faz : r.faz;
@@ -901,8 +913,9 @@ function pensarAuto(){
 
     const alvo = (ACOES_AUTO[acao]||{}).tipo || acao;
     if(ocupadoAgora && S.fazendo.tipo === alvo) continue;   // já está nisso
+    if(!podeAcao(acao)) continue;                            // sem dinheiro ou sem despensa
 
-    const motivo = b.n.toLowerCase() + ' em ' + Math.round(val) +
+    const motivo = b.n.toLowerCase() + ' em ' + Math.round(val) + (critico ? ' (no vermelho)' : '') +
                    (exc ? ' · exceção: ' + nomeCondicao(exc) : '');
     if(ocupadoAgora){
       const antes = S.fazendo.label;
@@ -2591,6 +2604,7 @@ function renderAuto(){
     <div class="meta">${S.auto
       ? 'Ele está jogando sozinho. Você só assiste — e pode mexer nas regras aqui a qualquer hora. A velocidade vai até <b>50x</b>.'
       : 'Ligando, ele passa a decidir tudo pelas regras abaixo. Nenhum controle seu funciona enquanto estiver ligado.'}</div>
+    <div class="meta" style="margin-top:6px;color:var(--texto3)">As regras valem também com ele ocupado: barra no vermelho (abaixo de 18, ou acima de 85 nas invertidas) faz ele largar qualquer coisa.</div>
     <div class="acts">
       <button class="btn ${S.auto?'dan':'pri'}" id="btAuto">${S.auto?'Desligar e voltar a jogar':'Ligar o piloto'}</button>
     </div></div>`;
@@ -2605,11 +2619,13 @@ function renderAuto(){
         <span class="pill ${agora?'o':''}">${val}</span></div>
       <div class="meta">Faz: <b>${(ACOES_AUTO[r.faz]||{n:r.faz}).n}</b></div>
       ${(r.exc||[]).map(e => `<div class="meta" style="color:var(--texto3)">Mas se ${nomeCondicao(e)} → <b style="color:var(--texto2)">${(ACOES_AUTO[e.faz]||{n:e.faz}).n}</b></div>`).join('')}
-      ${r.interrompe ? '<div class="meta" style="color:var(--laranja)">Pode largar o que estiver fazendo pra atender isso.</div>' : ''}
+      <div class="meta" style="color:${r.interrompe?'var(--laranja)':'var(--texto3)'}">${r.interrompe
+        ? 'Larga qualquer tarefa pra atender isso.'
+        : 'Larga tarefa leve sempre, e qualquer tarefa quando a barra estiver no vermelho.'}</div>
       <div class="acts">
         <button class="btn" data-edt="${i}">Editar</button>
         <button class="btn gho" data-liga="${i}">${r.ativa?'Desligar':'Ligar'}</button>
-        <button class="btn gho" data-int="${i}">${r.interrompe?'Não interromper':'Deixar interromper'}</button>
+        <button class="btn gho" data-int="${i}">${r.interrompe?'Só quando urgente':'Interromper sempre'}</button>
       </div></div>`;
   });
 
@@ -2801,7 +2817,7 @@ function editarExcecao(iRegra, j){
     quando = `<div class="card">
       <label class="f">Se ele já estiver</label>
       <div id="exAtiv" style="display:flex;flex-wrap:wrap;gap:5px"></div>
-      <div class="meta" style="margin-top:8px;color:var(--texto3)">Só vale nas regras marcadas como <b>Deixar interromper</b> — são as únicas que agem com ele ocupado.</div>
+      <div class="meta" style="margin-top:8px;color:var(--texto3)">Use pra proteger o que não pode ser cortado. A regra da Energia, por exemplo, não deve acordar quem já está dormindo.</div>
     </div>`;
   } else {
     quando = `<div class="card"><div class="meta">Vale em todo sábado e domingo. Não tem o que ajustar.</div></div>`;
