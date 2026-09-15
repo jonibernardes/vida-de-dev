@@ -2716,7 +2716,15 @@ function montarTarefas(){
   const el = document.getElementById('tarefas');
   if(abaAtual !== 'casa'){ el.style.display = 'none'; return; }
   el.style.display = 'flex';
-  el.style.top = (document.getElementById('vitais').offsetHeight + 12) + 'px';
+  const topo = document.getElementById('vitais').offsetHeight + 12;
+  el.style.top = topo + 'px';
+  // em tela baixa (notebook) o bloco descia por cima da coluna de velocidade.
+  // agora ele para onde ela comeca e rola por dentro
+  const spd = document.getElementById('spd');
+  const alturaPai = (el.offsetParent || document.body).clientHeight;
+  const livre = alturaPai - topo - (spd ? spd.offsetHeight + 10 : 0);
+  el.style.maxHeight = Math.max(70, livre) + 'px';
+  el.style.overflowY = 'auto';
   const lista = tarefasAgora();
   const chave = lista.map(a => a.ic+a.n+a.q+a.cor).join('|') || 'vazio';
   if(el.dataset.hash === chave) return;
