@@ -935,6 +935,7 @@ function tentarTrabalhoInterno(){
 }
 
 function rodarOrdem(ordem){
+  const cheia = filaCheia();
   for(const r of ordem){
     if(!r.ativa) continue;
     switch(r.id){
