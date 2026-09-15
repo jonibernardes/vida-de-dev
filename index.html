@@ -829,10 +829,16 @@ const nomeCondicao = e => ({
   fazendo:  () => 'estiver '+((GRUPOS_ATIVIDADE[e.k]||{n:e.k}).n),
 }[e.t] || (()=>e.t))();
 
+// comida e mercado no aperto nao esperam ter dinheiro: o saldo fica negativo
+// e o rombo vira divida no dia 5, igual as contas. Sem isso o jogo trava:
+// sem grana -> sem comida -> fome zero -> animo zero -> depressao -> sem grana.
+const ehEssencial = id => id === 'mercado' || id.indexOf('comer:') === 0;
+
 function podeAcao(id){
   const a = ACOES_AUTO[id];
   if(!a || id === 'nada') return false;
-  if(a.custo && a.custo() > S.dinheiro) return false;
+  const aperto = ehEssencial(id) && (S.b.fome < 30 || S.despensa < 15);
+  if(a.custo && a.custo() > S.dinheiro && !aperto) return false;
   if(a.despensa && a.despensa > S.despensa) return false;
   return true;
 }
@@ -988,6 +994,10 @@ function pensarAuto(){
 
     const critico = criticoDe(b, val);
     if(ocupadoAgora && !critico && !leve && !r.interrompe) continue;
+    // nem o vermelho justifica largar algo que comecou agora. Com duas barras
+    // no vermelho ao mesmo tempo, uma largava a outra de hora em hora e nenhuma
+    // das duas subia: era o ioio entre criticas
+    if(ocupadoAgora && !leve && S.t - (S.fazendo.ini||0) < 0.5) continue;
     // corta o ioiô: mesma regra não volta a mandar antes de 2h de jogo
     if(r.ultima != null && S.t - r.ultima < 2) continue;
 
@@ -1239,7 +1249,9 @@ function avancar(dt){
     toast('<b>Você travou.</b> Semanas ignorando tudo cobraram o preço. Descanso é o único caminho, e ele é lento.','r', 9000, 'travou');
   }
   if(S.depre){
-    if(descansando()) b.animo = cl(b.animo + 3*(dt/24), 0, 100);
+    // 3 por hora de descanso, nao 3 por dia: assim sair da depressao leva
+    // uns dois dias cuidando de si, e nao uma eternidade matematica
+    if(descansando()) b.animo = cl(b.animo + 3*dt, 0, 100);
     if(b.animo > 35){ S.depre = false; toast('A cabeça voltou ao lugar. Vá devagar.','v'); }
   }
 
@@ -1582,6 +1594,12 @@ function porDia(d){
 }
 
 function cobrarContas(){
+  // o que ficou no vermelho durante o mes entra na divida junto com as contas
+  if(S.dinheiro < 0){
+    const rombo = -S.dinheiro;
+    S.divida += rombo; S.dinheiro = 0;
+    ex('Rombo do mes foi pra divida', -rombo, true);
+  }
   const total = CFG.contas.reduce((a,c) => a+c.v, 0);
   if(S.dinheiro >= total){
     S.dinheiro -= total; ex('Contas do mês', -total);
