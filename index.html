@@ -919,7 +919,15 @@ function filaCheia(){
 function tentarTrabalhoInterno(){
   const R = S.regras;
   const cheia = filaCheia();
-  for(const r of R.trabalho){
+  // com projeto furando prazo, codar passa na frente de vender. Ele nao para de
+  // vender, so nao vende ANTES de tirar o atraso — senao a fila cresce sozinha,
+  // tudo atrasa junto e o animo despenca ate a depressao.
+  let ordem = R.trabalho;
+  if(S.projetos.some(p => p.feitas < p.horas && S.t > p.prazo)){
+    const na = r => r.id === 'entregar' || r.id === 'codar';
+    ordem = R.trabalho.filter(na).concat(R.trabalho.filter(r => !na(r)));
+  }
+  for(const r of ordem){
     if(!r.ativa) continue;
     switch(r.id){
       case 'entregar': {
@@ -2841,6 +2849,7 @@ function renderAuto(){
       <div class="cardTop"><h3>\u{1F5C2}\uFE0F Teto de projetos abertos</h3>
         <span class="pill ${R.tetoFila?'o':'v'}">${R.tetoFila ? R.tetoFila+' projetos' : 'sem trava'}</span></div>
       <div class="meta">Sem trava ele vende o quanto aparecer. Com teto, ele para de marcar reuni\u00e3o, de or\u00e7ar, de cobrar follow-up e de comprar lead enquanto a fila estiver cheia.</div>
+      <div class="meta" style="margin-top:6px;color:var(--texto3)">Com ou sem teto: tendo projeto fora do prazo, <b>codar e entregar passam na frente de vender</b> ate o atraso sair.</div>
       <div class="acts"><button class="btn gho" id="btTeto">Mudar teto</button></div>
     </div>`;
   R.trabalho.forEach((r, i) => {
