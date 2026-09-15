@@ -775,6 +775,7 @@ function regrasPadrao(){
     // não existe horário de trabalho: toda hora é hora.
     // sem trabalho na fila, ele cuida da barra mais distante da meta dela.
     confortavel: 80,
+    tetoFila: 4,   // quantos projetos abertos antes de parar de vender
     v2: true,      // todas as barras já contam com 100 = bom
   };
 }
@@ -903,8 +904,17 @@ function tentarTrabalho(){
   finally { autoExecutando = false; if(S.fazendo) S.fazendo.auto = true; }
 }
 
+// fila cheia: para de vender. Com cinco projetos atrasados na mesa, o sexto
+// nao entra — na vida real voce diz "agora nao da". Sem isso o piloto fechava
+// tudo que aparecia, atrasava tudo, e o animo despencava ate a depressao.
+function filaCheia(){
+  const teto = (S.regras && S.regras.tetoFila) || 4;
+  return S.projetos.filter(p => p.feitas < p.horas).length >= teto;
+}
+
 function tentarTrabalhoInterno(){
   const R = S.regras;
+  const cheia = filaCheia();
   for(const r of R.trabalho){
     if(!r.ativa) continue;
     switch(r.id){
@@ -919,12 +929,14 @@ function tentarTrabalhoInterno(){
         break;
       }
       case 'reuniao': {
+        if(cheia) break;
         const l = S.leads.filter(x => x.st === 'marcada' && S.t >= x.hReuniao - 1)
                          .sort((a,b)=>a.hReuniao-b.hReuniao)[0];
         if(l){ fazerReuniao(l.id); registrarAuto('🤝 Reunião', l.empresa); return true; }
         break;
       }
       case 'orcar': {
+        if(cheia) break;
         const l = S.leads.find(x => x.st === 'orcar');
         if(l){
           const pct = precoDoTipo(r, l.tipo);
@@ -936,6 +948,7 @@ function tentarTrabalhoInterno(){
         break;
       }
       case 'follow': {
+        if(cheia) break;
         const l = S.leads.find(x => x.st === 'pensando' && x.follows < CFG.followMax);
         if(l){ fazerFollow(l.id); registrarAuto('💬 Cobrou', l.nome); return true; }
         break;
@@ -1379,6 +1392,7 @@ function vontadePropria(){
 }
 
 function tentarLead(){
+  if(filaCheia()) return;   // lead custa dinheiro: nao paga por quem voce nao vai atender
   const m = CFG.mercados[S.mercadoMes];
   const porHoraAlvo = S.leadsDia/9;
   const vol = rnd(m.volMin, m.volMax);
