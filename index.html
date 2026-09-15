@@ -775,7 +775,7 @@ function regrasPadrao(){
     // não existe horário de trabalho: toda hora é hora.
     // sem trabalho na fila, ele cuida da barra mais distante da meta dela.
     confortavel: 80,
-    tetoFila: 4,   // quantos projetos abertos antes de parar de vender
+    tetoFila: 0,   // quantos projetos abertos antes de parar de vender. 0 = sem trava
     v2: true,      // todas as barras já contam com 100 = bom
   };
 }
@@ -783,7 +783,10 @@ function regrasPadrao(){
 // partida antiga guardava estresse e sujeira ao contrário: vira os números uma vez só
 function migrarRegras(){
   const R = S.regras;
-  if(!R || R.v2) return;
+  if(!R) return;
+  // o teto de fila nasceu ligado em 4 e a decisao foi deixar sem trava por padrao
+  if(R.v3 === undefined){ R.tetoFila = 0; R.v3 = true; }
+  if(R.v2) return;
   R.vitais.forEach(r => {
     if(r.k === 'estresse' || r.k === 'sujeira') r.v = 100 - r.v;
     (r.exc||[]).forEach(e => {
@@ -908,7 +911,8 @@ function tentarTrabalho(){
 // nao entra — na vida real voce diz "agora nao da". Sem isso o piloto fechava
 // tudo que aparecia, atrasava tudo, e o animo despencava ate a depressao.
 function filaCheia(){
-  const teto = (S.regras && S.regras.tetoFila) || 4;
+  const teto = (S.regras && S.regras.tetoFila) || 0;
+  if(!teto) return false;   // zero = sem trava: ele vende o quanto aparecer
   return S.projetos.filter(p => p.feitas < p.horas).length >= teto;
 }
 
@@ -2832,6 +2836,13 @@ function renderAuto(){
       <div class="meta" style="margin-top:8px;color:var(--texto3)">Cada meta se ajusta em <b>Editar</b>, na regra da barra.</div>
       <div class="acts"><button class="btn gho" id="btConf">Meta padrão das novas: ${R.confortavel||80}</button></div>
     </div>`;
+  h += `<div class="secTit">Quanto ele aceita de uma vez</div>
+    <div class="card">
+      <div class="cardTop"><h3>\u{1F5C2}\uFE0F Teto de projetos abertos</h3>
+        <span class="pill ${R.tetoFila?'o':'v'}">${R.tetoFila ? R.tetoFila+' projetos' : 'sem trava'}</span></div>
+      <div class="meta">Sem trava ele vende o quanto aparecer. Com teto, ele para de marcar reuni\u00e3o, de or\u00e7ar, de cobrar follow-up e de comprar lead enquanto a fila estiver cheia.</div>
+      <div class="acts"><button class="btn gho" id="btTeto">Mudar teto</button></div>
+    </div>`;
   R.trabalho.forEach((r, i) => {
     const d = TRABALHO_AUTO.find(x => x.id === r.id);
     h += `<div class="card" style="${r.ativa?'':'opacity:.45'}">
@@ -2875,6 +2886,10 @@ function renderAuto(){
   document.getElementById('btPadrao').onclick = () => {
     S.regras = regrasPadrao(); toast('Regras de volta ao padrão.','o'); renderAuto();
   };
+  const bt = document.getElementById('btTeto');
+  if(bt) bt.onclick = () => numero('Teto de projetos abertos',
+    'Quantos projetos em execu\u00e7\u00e3o antes de ele parar de vender. Zero deixa sem trava.',
+    R.tetoFila||0, 0, 12, v => { R.tetoFila = v; renderAuto(); });
   const bc = document.getElementById('btConf');
   if(bc) bc.onclick = () => numero('Meta padrão',
     'Vale só para barra que ainda não tem meta própria. Para mudar uma barra específica, use Editar na regra dela.',
