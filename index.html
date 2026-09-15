@@ -923,10 +923,18 @@ function tentarTrabalhoInterno(){
   // vender, so nao vende ANTES de tirar o atraso — senao a fila cresce sozinha,
   // tudo atrasa junto e o animo despenca ate a depressao.
   let ordem = R.trabalho;
+  // travado de vez: ele nao encara projeto nem cliente, so entrega o que ja estava
+  // pronto. Enquanto insistia em trabalhar, nunca descansava o bastante pra sair,
+  // e a depressao virava fim de jogo silencioso.
+  if(S.depre) return rodarOrdem(R.trabalho.filter(r => r.id === 'entregar'));
   if(S.projetos.some(p => p.feitas < p.horas && S.t > p.prazo)){
     const na = r => r.id === 'entregar' || r.id === 'codar';
     ordem = R.trabalho.filter(na).concat(R.trabalho.filter(r => !na(r)));
   }
+  return rodarOrdem(ordem);
+}
+
+function rodarOrdem(ordem){
   for(const r of ordem){
     if(!r.ativa) continue;
     switch(r.id){
