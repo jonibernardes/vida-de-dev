@@ -750,7 +750,7 @@ const TRABALHO_AUTO = [
   {id:'avaliacao',n:'Pedir avaliação a cliente feliz', ic:'⭐'},
   {id:'ra',       n:'Responder o Reclame Aqui', ic:'✍️'},
   {id:'codar',    n:'Codar no projeto mais urgente', ic:'⌨️'},
-  {id:'recup',    n:'Entrar em modo recuperação quando travar', ic:'🛟'},
+  {id:'recup',    n:'Entrar em modo recuperação quando travar', ic:'🔕'},
 ];
 
 function regrasPadrao(){
@@ -995,7 +995,7 @@ function rodarOrdem(ordem){
         entrarRecuperacao();
         // segura o mais adiantado e devolve a entrada do resto
         travados.slice(1).forEach(x => cancelarProjeto(x.id));
-        registrarAuto('🛟 Entrou em recuperação', travados.length-1 + ' cancelado(s), agenda fechada');
+        registrarAuto('🔕 Entrou em recuperação', travados.length-1 + ' cancelado(s), agenda fechada');
         return true;
       }
       case 'codar': {
@@ -3289,14 +3289,14 @@ function renderMesa(){
   const rotMerc = {bom:['Mercado bom','v'], normal:['Mercado normal','o'], ruim:['Mercado ruim','r']};
 
   if(S.recup){
-    h += `<div class="card warn"><div class="cardTop"><h3>🛟 Modo recuperação</h3>
+    h += `<div class="card warn"><div class="cardTop"><h3>🔕 Modo recuperação</h3>
         <span class="pill o">${Math.max(1,Math.round((S.t-S.recup.desde)/24))} dia(s)</span></div>
       <div class="meta">Telefone no silencioso e agenda fechada. Atraso, chamado e dívida não mexem mais no seu humor, e ninguém reclama enquanto isso. Reunião só quando você voltar.</div>
       <div class="meta" style="color:var(--texto3)">${S.recup.cancelados} cancelado(s), ${fmt(S.recup.devolvido)} devolvido. Sai sozinho quando não sobrar atraso, o ânimo passar de 60 e a calma de 60.</div>
       <div class="acts"><button class="btn gho" id="btSairRec">Voltar à rotina normal</button></div></div>`;
   } else if(podeRecuperar()){
     const trav = projetosTravados().length;
-    h += `<div class="card bad"><div class="cardTop"><h3>🛟 Você travou</h3>
+    h += `<div class="card bad"><div class="cardTop"><h3>🔕 Você travou</h3>
         <span class="pill r">${trav} entrega${trav>1?'s':''} parada${trav>1?'s':''} há mais de 7 dias</span></div>
       <div class="meta">Dá pra parar tudo: cancelar o que não vai sair, devolver a entrada, fechar a agenda e desligar o telefone até ficar em dia. Devolver dinheiro não gera reclamação.</div>
       <div class="acts"><button class="btn pri" id="btEntrarRec">Entrar no modo recuperação</button></div></div>`;
