@@ -1693,7 +1693,7 @@ function entrarRecuperacao(){
   S.recup = {desde:S.t, cancelados:0, devolvido:0};
   S.agenda = false;
   S.b.estresse = cl(S.b.estresse - 15, 0, 100);
-  toast('<b>Modo recuperacao.</b> Telefone no silencioso, agenda fechada. Agora e entregar o que da e cuidar de voce.','o', 9000);
+  toast('<b>Modo recuperação.</b> Telefone no silencioso, agenda fechada. Agora é entregar o que dá e cuidar de você.','o', 9000);
   render();
   return true;
 }
@@ -1718,8 +1718,8 @@ function cancelarProjeto(id){
   S.b.animo = cl(S.b.animo + 6, 0, 100);
   S.b.estresse = cl(S.b.estresse - 12, 0, 100);
   if(S.recup){ S.recup.cancelados++; S.recup.devolvido += dev; }
-  zap(p.contato, 'Tudo bem, obrigado por avisar. Quando voce puder a gente retoma.');
-  toast('Cancelou com <b>'+p.cliente+'</b> e devolveu '+fmt(dev)+'. Sem reclamacao.','o', 7000);
+  zap(p.contato, 'Tudo bem, obrigado por avisar. Quando você puder a gente retoma.');
+  toast('Cancelou com <b>'+p.cliente+'</b> e devolveu '+fmt(dev)+'. Ninguém reclamou.','o', 7000);
   render();
 }
 
@@ -3289,10 +3289,12 @@ function renderMesa(){
   const rotMerc = {bom:['Mercado bom','v'], normal:['Mercado normal','o'], ruim:['Mercado ruim','r']};
 
   if(S.recup){
+    const dRec = Math.floor((S.t - S.recup.desde)/24);
+    const cRec = S.recup.cancelados;
     h += `<div class="card warn"><div class="cardTop"><h3>🔕 Modo recuperação</h3>
-        <span class="pill o">${Math.max(1,Math.round((S.t-S.recup.desde)/24))} dia(s)</span></div>
-      <div class="meta">Telefone no silencioso e agenda fechada. Atraso, chamado e dívida não mexem mais no seu humor, e ninguém reclama enquanto isso. Reunião só quando você voltar.</div>
-      <div class="meta" style="color:var(--texto3)">${S.recup.cancelados} cancelado(s), ${fmt(S.recup.devolvido)} devolvido. Sai sozinho quando não sobrar atraso, o ânimo passar de 60 e a calma de 60.</div>
+        <span class="pill o">${dRec < 1 ? 'começou hoje' : (dRec === 1 ? 'há 1 dia' : 'há '+dRec+' dias')}</span></div>
+      <div class="meta">Telefone no silencioso e agenda fechada. Atraso, chamado e dívida não mexem mais no seu humor, e ninguém reclama enquanto isso. Nada de reunião até você voltar.</div>
+      <div class="meta" style="color:var(--texto3)">${cRec ? cRec+' projeto'+(cRec>1?'s':'')+' cancelado'+(cRec>1?'s':'')+', '+fmt(S.recup.devolvido)+' de volta pro cliente.' : 'Você ainda não cancelou nada.'} Volta sozinho quando não sobrar atraso e a cabeça estiver no lugar.</div>
       <div class="acts"><button class="btn gho" id="btSairRec">Voltar à rotina normal</button></div></div>`;
   } else if(podeRecuperar()){
     const trav = projetosTravados().length;
@@ -3329,7 +3331,7 @@ function renderMesa(){
 
   // reuniões
   const marcadas = S.leads.filter(l => l.st === 'marcada');
-  if(marcadas.length){
+  if(marcadas.length && !S.recup){
     h += `<div class="secTit">Reuniões <span class="n">${marcadas.length}</span></div>`;
     marcadas.sort((a,b)=>a.hReuniao-b.hReuniao).forEach(l => {
       const passou = S.t > l.hReuniao;
@@ -3343,7 +3345,7 @@ function renderMesa(){
 
   // orçamentos a enviar
   const orcar = S.leads.filter(l => l.st === 'orcar');
-  if(orcar.length){
+  if(orcar.length && !S.recup){
     h += `<div class="secTit">Mandar orçamento <span class="n">${orcar.length}</span></div>`;
     orcar.forEach(l => {
       h += `<div class="card warn"><div class="cardTop"><h3>${l.empresa}</h3><span class="pill o">${CFG.tipos[l.tipo].nome}</span></div>
@@ -3354,13 +3356,18 @@ function renderMesa(){
 
   // pensando
   const pens = S.leads.filter(l => l.st === 'pensando');
-  if(pens.length){
+  if(pens.length && !S.recup){
     h += `<div class="secTit">Ficou de pensar <span class="n">${pens.length}</span></div>`;
     pens.forEach(l => {
       h += `<div class="card"><div class="cardTop"><h3>${l.empresa}</h3><span class="pill">${fmt(l.orcamento)}</span></div>
         <div class="meta">${l.nome} · ${l.follows} de ${CFG.followMax} cutucadas</div>
         <div class="acts"><button class="btn pri" data-fol="${l.id}" ${l.follows>=CFG.followMax?'disabled':''}>Cobrar no zap (15 min)</button></div></div>`;
     });
+  }
+
+  if(S.recup){
+    const guardados = S.leads.filter(l => l.st === 'marcada' || l.st === 'orcar' || l.st === 'pensando').length;
+    if(guardados) h += `<div class="card"><div class="meta">${guardados} cliente${guardados>1?'s':''} esperando resposta. Ninguém some enquanto você está fora, mas também ninguém é atendido.</div></div>`;
   }
 
   // projetos em execução
