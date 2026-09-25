@@ -572,6 +572,7 @@ function novoJogo(){
     vel: 3,
     dinheiro: 12000,
     divida: 0,
+    recup: null,               // modo recuperacao: {desde, cancelados, devolvido}
     b:    {energia:78, fome:70, higiene:80, animo:72, corpo:55, estresse:18, casamento:74},
     base: {energia:72, fome:50, higiene:50, animo:68, corpo:58, estresse:22, casamento:70},
     insta: {hoje:0, total:0},
@@ -749,6 +750,7 @@ const TRABALHO_AUTO = [
   {id:'avaliacao',n:'Pedir avaliação a cliente feliz', ic:'⭐'},
   {id:'ra',       n:'Responder o Reclame Aqui', ic:'✍️'},
   {id:'codar',    n:'Codar no projeto mais urgente', ic:'⌨️'},
+  {id:'recup',    n:'Entrar em modo recuperação quando travar', ic:'🛟'},
 ];
 
 function regrasPadrao(){
@@ -771,6 +773,7 @@ function regrasPadrao(){
       {id:'orcar', ativa:true, precos:{S:100, M:95, C:90}}, {id:'follow', ativa:true},
       {id:'avaliacao', ativa:true, satisfacao:80}, {id:'ra', ativa:true},
       {id:'codar', ativa:true, horas:3},
+      {id:'recup', ativa:true},
     ],
     // não existe horário de trabalho: toda hora é hora.
     // sem trabalho na fila, ele cuida da barra mais distante da meta dela.
@@ -927,7 +930,8 @@ function tentarTrabalhoInterno(){
   // travado de vez: ele nao encara projeto nem cliente, so entrega o que ja estava
   // pronto. Enquanto insistia em trabalhar, nunca descansava o bastante pra sair,
   // e a depressao virava fim de jogo silencioso.
-  if(S.depre) return rodarOrdem(R.trabalho.filter(r => r.id === 'entregar'));
+  // travado de vez ou em recuperação, a regra de recuperação continua valendo
+  if(S.depre) return rodarOrdem(R.trabalho.filter(r => r.id === 'entregar' || r.id === 'recup'));
   if(S.projetos.some(p => p.feitas < p.horas && S.t > p.prazo)){
     const na = r => r.id === 'entregar' || r.id === 'codar';
     ordem = R.trabalho.filter(na).concat(R.trabalho.filter(r => !na(r)));
@@ -951,14 +955,14 @@ function rodarOrdem(ordem){
         break;
       }
       case 'reuniao': {
-        if(cheia) break;
+        if(cheia || S.recup) break;
         const l = S.leads.filter(x => x.st === 'marcada' && S.t >= x.hReuniao - 1)
                          .sort((a,b)=>a.hReuniao-b.hReuniao)[0];
         if(l){ fazerReuniao(l.id); registrarAuto('🤝 Reunião', l.empresa); return true; }
         break;
       }
       case 'orcar': {
-        if(cheia) break;
+        if(cheia || S.recup) break;
         const l = S.leads.find(x => x.st === 'orcar');
         if(l){
           const pct = precoDoTipo(r, l.tipo);
@@ -970,7 +974,7 @@ function rodarOrdem(ordem){
         break;
       }
       case 'follow': {
-        if(cheia) break;
+        if(cheia || S.recup) break;
         const l = S.leads.find(x => x.st === 'pensando' && x.follows < CFG.followMax);
         if(l){ fazerFollow(l.id); registrarAuto('💬 Cobrou', l.nome); return true; }
         break;
@@ -984,6 +988,15 @@ function rodarOrdem(ordem){
         if(S.ra.abertas.length){ responderRA(S.ra.abertas[0].id); S.fazendo.auto = true;
           registrarAuto('✍️ Respondeu o RA', S.ra.abertas[0].cliente); return true; }
         break;
+      }
+      case 'recup': {
+        if(!podeRecuperar()) break;
+        const travados = projetosTravados().sort((a,b) => (b.feitas/b.horas) - (a.feitas/a.horas));
+        entrarRecuperacao();
+        // segura o mais adiantado e devolve a entrada do resto
+        travados.slice(1).forEach(x => cancelarProjeto(x.id));
+        registrarAuto('🛟 Entrou em recuperação', travados.length-1 + ' cancelado(s), agenda fechada');
+        return true;
       }
       case 'codar': {
         const p = S.projetos.filter(x => x.feitas < x.horas).sort((a,b)=>a.prazo-b.prazo)[0];
@@ -1240,12 +1253,15 @@ function avancar(dt){
   if(b.estresse > 80) da -= 0.9;
   // manhã é no tranco: antes de banho ou corrida, o ânimo cai mais
   if(hDia() >= 6 && hDia() < 11 && b.higiene < 65) da -= 1.4;
-  // fila cheia pesa: cada projeto além do terceiro, e cada atraso, derruba o ânimo
-  const abertos = S.projetos.length;
-  const atrasados = S.projetos.filter(p => S.t > p.prazo).length;
-  if(abertos > 3) da -= 0.3*(abertos - 3);
-  da -= 0.6*atrasados;
-  if(S.chamados.length > 1) da -= 0.25*(S.chamados.length - 1);
+  // fila cheia pesa: cada projeto além do terceiro, e cada atraso, derruba o ânimo.
+  // em modo recuperação o telefone está no silencioso e nada disso chega até você
+  if(!S.recup){
+    const abertos = S.projetos.length;
+    const atrasados = S.projetos.filter(p => S.t > p.prazo).length;
+    if(abertos > 3) da -= 0.3*(abertos - 3);
+    da -= 0.6*atrasados;
+    if(S.chamados.length > 1) da -= 0.25*(S.chamados.length - 1);
+  }
   if(!dormindo && S.fazendo && S.fazendo.tipo === 'tv') da = 0;
   b.animo = cl(b.animo + da*dt, 0, 100);
 
@@ -1268,10 +1284,10 @@ function avancar(dt){
   });
 
   // estresse contínuo: dívida, trabalho e o corpo no limite
-  let de = (S.divida/2500)/24;
+  let de = S.recup ? 0 : (S.divida/2500)/24;
   if(S.fazendo && ['projeto','chamado','reuniao','follow'].includes(S.fazendo.tipo)) de += 0.40;
-  if(S.chamados.length) de += 0.12*S.chamados.length;
-  if(S.projetos.some(p => S.t > p.prazo)) de += 0.5;
+  if(!S.recup && S.chamados.length) de += 0.12*S.chamados.length;
+  if(!S.recup && S.projetos.some(p => S.t > p.prazo)) de += 0.5;
   if(b.energia < 30) de += 0.35;
   if(b.fome < 25) de += 0.3;
   if(dormindo) de = -0.9;
@@ -1340,6 +1356,7 @@ function porHora(d){
   });
   if(h >= 8 && h <= 20 && (!fds() || Math.random() < 0.3)) chegarChamado();
   autocuidado();
+  verRecuperacao();
   vontadePropria();
   render(true);
 }
@@ -1658,7 +1675,63 @@ function cobrancaAgiota(){
   toast('<b>O cara da grana ligou.</b> Não foi uma conversa boa.','r', 8000, 'agiota');
 }
 
+/* ============================================================
+   MODO RECUPERACAO
+   Uma semana travado, entrega parada, cobranca chegando. Voce cancela o que
+   nao vai sair, devolve a entrada, fecha a agenda e poe o telefone no
+   silencioso. Volta a trabalhar porque a cobranca parou de chegar.
+   ============================================================ */
+const DIAS_PRA_TRAVAR = 7;
+
+function projetosTravados(){
+  return S.projetos.filter(p => p.feitas < p.horas && S.t > p.prazo + DIAS_PRA_TRAVAR*24);
+}
+function podeRecuperar(){ return !S.recup && projetosTravados().length > 0; }
+
+function entrarRecuperacao(){
+  if(S.recup) return false;
+  S.recup = {desde:S.t, cancelados:0, devolvido:0};
+  S.agenda = false;
+  S.b.estresse = cl(S.b.estresse - 15, 0, 100);
+  toast('<b>Modo recuperacao.</b> Telefone no silencioso, agenda fechada. Agora e entregar o que da e cuidar de voce.','o', 9000);
+  render();
+  return true;
+}
+
+function sairRecuperacao(){
+  if(!S.recup) return;
+  const dias = Math.max(1, Math.round((S.t - S.recup.desde)/24));
+  S.recup = null;
+  S.agenda = true;
+  toast('<b>Voltou.</b> '+dias+' dia'+(dias===1?'':'s')+' fora do ar. Agenda aberta de novo.','v', 8000);
+  render();
+}
+
+// cancelar devolve a entrada e nao gera reclamacao: voce avisou antes de sumir
+function cancelarProjeto(id){
+  const p = S.projetos.find(x => x.id === id);
+  if(!p) return;
+  const dev = Math.round(p.preco/2);
+  S.dinheiro -= dev;
+  ex('Devolveu a entrada — '+p.cliente, -dev);
+  S.projetos = S.projetos.filter(x => x.id !== id);
+  S.b.animo = cl(S.b.animo + 6, 0, 100);
+  S.b.estresse = cl(S.b.estresse - 12, 0, 100);
+  if(S.recup){ S.recup.cancelados++; S.recup.devolvido += dev; }
+  zap(p.contato, 'Tudo bem, obrigado por avisar. Quando voce puder a gente retoma.');
+  toast('Cancelou com <b>'+p.cliente+'</b> e devolveu '+fmt(dev)+'. Sem reclamacao.','o', 7000);
+  render();
+}
+
+// sai sozinho quando nao sobrar atraso e a cabeca voltar ao lugar
+function verRecuperacao(){
+  if(!S.recup) return;
+  const atrasado = S.projetos.some(p => p.feitas < p.horas && S.t > p.prazo);
+  if(!atrasado && S.b.animo >= 60 && S.b.estresse <= 40) sairRecuperacao();
+}
+
 function reclamar(cliente, motivo){
+  if(S.recup) return;   // telefone no silencioso: nao chega e nao vira reclamacao
   if(S.ra.abertas.some(r => r.cliente === cliente)) return;
   S.ra.abertas.push({id:S.seq++, cliente, motivo, quando:S.t});
   S.b.estresse = cl(S.b.estresse+5,0,100);
@@ -3215,6 +3288,20 @@ function renderMesa(){
   const M = CFG.mercados[S.mercadoMes];
   const rotMerc = {bom:['Mercado bom','v'], normal:['Mercado normal','o'], ruim:['Mercado ruim','r']};
 
+  if(S.recup){
+    h += `<div class="card warn"><div class="cardTop"><h3>🛟 Modo recuperação</h3>
+        <span class="pill o">${Math.max(1,Math.round((S.t-S.recup.desde)/24))} dia(s)</span></div>
+      <div class="meta">Telefone no silencioso e agenda fechada. Atraso, chamado e dívida não mexem mais no seu humor, e ninguém reclama enquanto isso. Reunião só quando você voltar.</div>
+      <div class="meta" style="color:var(--texto3)">${S.recup.cancelados} cancelado(s), ${fmt(S.recup.devolvido)} devolvido. Sai sozinho quando não sobrar atraso, o ânimo passar de 60 e a calma de 60.</div>
+      <div class="acts"><button class="btn gho" id="btSairRec">Voltar à rotina normal</button></div></div>`;
+  } else if(podeRecuperar()){
+    const trav = projetosTravados().length;
+    h += `<div class="card bad"><div class="cardTop"><h3>🛟 Você travou</h3>
+        <span class="pill r">${trav} entrega${trav>1?'s':''} parada${trav>1?'s':''} há mais de 7 dias</span></div>
+      <div class="meta">Dá pra parar tudo: cancelar o que não vai sair, devolver a entrada, fechar a agenda e desligar o telefone até ficar em dia. Devolver dinheiro não gera reclamação.</div>
+      <div class="acts"><button class="btn pri" id="btEntrarRec">Entrar no modo recuperação</button></div></div>`;
+  }
+
   h += `<div class="card ${S.mercadoMes==='ruim'?'bad':''}">
     <div class="cardTop"><h3>Agenda</h3>
       <span class="pill ${rotMerc[S.mercadoMes][1]}">${rotMerc[S.mercadoMes][0]}</span></div>
@@ -3293,6 +3380,7 @@ function renderMesa(){
           <button class="btn pri" data-tra="${p.id}" data-h="2">Codar 2h</button>
           <button class="btn" data-tra="${p.id}" data-h="4">4h</button>
           <button class="btn" data-tra="${p.id}" data-h="8">8h</button>
+          ${S.recup?`<button class="btn dan" data-canc="${p.id}">Cancelar e devolver ${fmt(p.preco/2)}</button>`:''}
         </div></div>`;
     });
   }
@@ -3342,6 +3430,11 @@ function renderMesa(){
   el.querySelectorAll('[data-fol]').forEach(b => b.onclick = () => fazerFollow(+b.dataset.fol));
   el.querySelectorAll('[data-tra]').forEach(b => b.onclick = () => trabalhar(+b.dataset.tra, +b.dataset.h));
   el.querySelectorAll('[data-ent]').forEach(b => b.onclick = () => entregar(+b.dataset.ent));
+  el.querySelectorAll('[data-canc]').forEach(b => b.onclick = () => { cancelarProjeto(+b.dataset.canc); renderMesa(); });
+  const bER = document.getElementById('btEntrarRec');
+  if(bER) bER.onclick = () => { entrarRecuperacao(); renderMesa(); };
+  const bSR = document.getElementById('btSairRec');
+  if(bSR) bSR.onclick = () => { sairRecuperacao(); renderMesa(); };
   el.querySelectorAll('[data-cha]').forEach(b => b.onclick = () => atenderChamado(+b.dataset.cha));
   el.querySelectorAll('[data-ava]').forEach(b => b.onclick = () => pedirAvaliacao(+b.dataset.ava));
 }
