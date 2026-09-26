@@ -1723,11 +1723,12 @@ function cancelarProjeto(id){
   render();
 }
 
-// sai sozinho quando nao sobrar atraso e a cabeca voltar ao lugar
+// sai quando o trabalho está em dia, e só por isso. Humor não entra na conta:
+// voltar bem-disposto com atraso na mesa é entrar no mesmo buraco na semana seguinte.
+// Projeto pronto e não entregue continua contando como atraso: entregue antes de voltar.
 function verRecuperacao(){
   if(!S.recup) return;
-  const atrasado = S.projetos.some(p => p.feitas < p.horas && S.t > p.prazo);
-  if(!atrasado && S.b.animo >= 60 && S.b.estresse <= 40) sairRecuperacao();
+  if(!S.projetos.some(p => S.t > p.prazo)) sairRecuperacao();
 }
 
 function reclamar(cliente, motivo){
@@ -3293,8 +3294,8 @@ function renderMesa(){
     const cRec = S.recup.cancelados;
     h += `<div class="card warn"><div class="cardTop"><h3>🔕 Modo recuperação</h3>
         <span class="pill o">${dRec < 1 ? 'começou hoje' : (dRec === 1 ? 'há 1 dia' : 'há '+dRec+' dias')}</span></div>
-      <div class="meta">Telefone no silencioso e agenda fechada. Atraso, chamado e dívida não mexem mais no seu humor, e ninguém reclama enquanto isso. Nada de reunião até você voltar.</div>
-      <div class="meta" style="color:var(--texto3)">${cRec ? cRec+' projeto'+(cRec>1?'s':'')+' cancelado'+(cRec>1?'s':'')+', '+fmt(S.recup.devolvido)+' de volta pro cliente.' : 'Você ainda não cancelou nada.'} Volta sozinho quando não sobrar atraso e a cabeça estiver no lugar.</div>
+      <div class="meta">Telefone no silencioso e agenda fechada. Atraso, chamado e dívida não mexem mais no seu humor, e ninguém reclama enquanto isso. Nada de reunião até você colocar tudo em dia.</div>
+      <div class="meta" style="color:var(--texto3)">${cRec ? cRec+' projeto'+(cRec>1?'s':'')+' cancelado'+(cRec>1?'s':'')+', '+fmt(S.recup.devolvido)+' de volta pro cliente.' : 'Você ainda não cancelou nada.'} Volta sozinho quando nenhum projeto estiver atrasado, e só por isso: voltar com atraso na mesa é atolar de novo.</div>
       <div class="acts"><button class="btn gho" id="btSairRec">Voltar à rotina normal</button></div></div>`;
   } else if(podeRecuperar()){
     const trav = projetosTravados().length;
